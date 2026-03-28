@@ -1,5 +1,5 @@
 
-startingvalue=22
+startingvalue=155
 n = nImages;
 images = newArray(n);
 for (i=0; i < n; i++)
