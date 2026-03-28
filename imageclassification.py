@@ -12,6 +12,8 @@ import time
 import numpy as np
 
 
+#0 work out if its accurate or not - why does training say 94% accurate but the sampel images are all wrong.
+
 #1 set up, train and test basic model based on z projected image
 #####1.1 include defining size of images
 
@@ -150,7 +152,7 @@ loss_fn = nn.CrossEntropyLoss()
 optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 
 # Let's build our model
-train(10)
+#train(10)
 print('Finished Training')
 
 # Test which classes performed well
