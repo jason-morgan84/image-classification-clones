@@ -12,7 +12,6 @@ import time
 import numpy as np
 
 
-#0 work out if its accurate or not - why does training say 94% accurate but the sampel images are all wrong.
 
 #1 set up, train and test basic model based on z projected image
 #####1.1 include defining size of images
@@ -21,38 +20,40 @@ import numpy as np
 
 #3 how to choose the cnn architecture?
 
-#3 tensors on cpu or gpu?
 
+batch_size=5
+classes = ("AR","ARS")
 
-batch_size=10
-classes = (1,0)
+def testImage(index):
+    model.eval()
 
+    image, label = test_images[index]
+    print(label)
 
 # Function to test the model with a batch of images and show the labels predictions
 def testBatch():
     # get batch of images from the test DataLoader
+    model.eval()
     images, labels = next(iter(test_loader))
 
     # show all images as one image grid
     imagegrid = torchvision.utils.make_grid(images)
-    print(imagegrid.shape)
     img = torchvision.transforms.ToPILImage()(imagegrid[0])
     img.show()
-    #imageshow(imagegrid)
 
     # Show the real labels on the screen
-    print('Real labels: ', ' '.join('%5s' % classes[labels[j]]
-                                    for j in range(batch_size)))
+    print('Real labels: ', ' '.join('%5s' % classes[labels[j]] for j in range(batch_size)))
 
     # Let's see what if the model identifiers the  labels of those example
     outputs = model(images)
 
     # We got the probability for every 10 labels. The highest (max) probability should be correct label
-    _, predicted = torch.max(outputs, 1)
+    _, predicted = torch.max(outputs.data, 1)
 
     # Let's show the predicted labels on the screen to compare with the real ones
     print('Predicted: ', ' '.join('%5s' % classes[predicted[j]]
                                   for j in range(batch_size)))
+
 
 # Function to save the model
 def saveModel():
@@ -66,7 +67,6 @@ def testAccuracy():
     accuracy = 0.0
     total = 0.0
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #device = torch.device("cpu")
     
     with torch.no_grad():
         for data in test_loader:
@@ -83,12 +83,12 @@ def testAccuracy():
     return accuracy
 
 def train(num_epochs):
-    
+    model.train()
     best_accuracy = 0.0
     
     # Define your execution device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #device = torch.device("cpu")
+
     print("The model will be running on", device, "device")
     # Convert model parameters and buffers to CPU or Cuda
     model.to(device)
@@ -135,10 +135,9 @@ def train(num_epochs):
 
 
 
-#test=ToTensor()(images[46]['image'].transpose(1,2,0))
-#print (test.size())
+
 transform_norm = Compose([ToTensor(),Normalize((0.5,0.5),(0.5,0.5))])
-#target_transform = Compose([torch.tensor()])
+
 train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
 test_images = classification_class.ImagesDataset(annotations_file='test_images.csv', img_dir='test/',transform=transform_norm)
 
@@ -169,8 +168,4 @@ print('Loaded model')
 testBatch()
 
 
-""" image,label = train_images[41]
-fig = plt.figure()
-plt.imshow(image.numpy()[1])
-plt.show() """
 
