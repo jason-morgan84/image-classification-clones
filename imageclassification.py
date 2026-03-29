@@ -12,6 +12,7 @@ import time
 import numpy as np
 
 
+#0: look into loss, training loss v validation loss
 
 #1 set up, train and test basic model based on z projected image
 #####1.1 include defining size of images
@@ -66,7 +67,6 @@ def testAccuracy():
     model.eval()
     accuracy = 0.0
     total = 0.0
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     with torch.no_grad():
         for data in test_loader:
@@ -86,10 +86,6 @@ def train(num_epochs):
     model.train()
     best_accuracy = 0.0
     
-    # Define your execution device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    print("The model will be running on", device, "device")
     # Convert model parameters and buffers to CPU or Cuda
     model.to(device)
 
@@ -113,32 +109,38 @@ def train(num_epochs):
             # adjust parameters based on the calculated gradients
             optimizer.step()
 
-            # Let's print statistics for every 1,000 images
+
+            # print loss statistics twice per epoch
             running_loss += loss.item()     # extract the loss value
-            if i % 1000 == 999:    
-                # print every 1000 (twice per epoch) 
+            if i % int((n_batches - 1)/2) == int((n_batches - 1)/2 - 1):    
                 print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 1000))
+                      (epoch + 1, i + 1, running_loss / (n_batches)))
                 # zero the loss
                 running_loss = 0.0
 
         # Compute and print the average accuracy fo this epoch when tested over all 10000 test images
         accuracy = testAccuracy()
-        print('For epoch', epoch+1,'the test accuracy over the whole test set is %d %%' % accuracy)
+        print('For epoch', epoch+1,'the test accuracy over the whole test set is %d %%' % accuracy,"(",round((time.time() - start_time),3),"seconds)")
         
         # we want to save the model if the accuracy is the best
         if accuracy > best_accuracy:
             saveModel()
             best_accuracy = accuracy
 
-        print("--- %s seconds ---" % (time.time() - start_time))
+        #print("--- %s seconds ---" % )
 
+# Define your execution device
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
+print("The model will be running on", device, "device")
 
 transform_norm = Compose([ToTensor(),Normalize((0.5,0.5),(0.5,0.5))])
 
+
 train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
+n_train_images = len(train_images)
+n_batches = n_train_images/batch_size
+
 test_images = classification_class.ImagesDataset(annotations_file='test_images.csv', img_dir='test/',transform=transform_norm)
 
 
@@ -151,12 +153,8 @@ loss_fn = nn.CrossEntropyLoss()
 optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 
 # Let's build our model
-#train(10)
+train(5)
 print('Finished Training')
-
-# Test which classes performed well
-testAccuracy()
-print('Finished Testing')
 
 # Let's load the model we just created and test the accuracy per label
 model = classification_class.Network()
