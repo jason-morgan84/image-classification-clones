@@ -13,11 +13,10 @@ import numpy as np
 
 
 #0: look into loss, training loss v validation loss
+#1: add section to testAccuracy to return accuracy by group
 
-#1 set up, train and test basic model based on z projected image
-#####1.1 include defining size of images
 
-#2 look into more confocal specific models, including using 
+#2 look into more confocal specific models
 
 #3 how to choose the cnn architecture?
 
