@@ -10,7 +10,9 @@ from torch.optim import Adam
 from torch.autograd import Variable
 import time
 import numpy as np
-from captum.attr import Occlusion
+#from captum.attr import Occlusion
+
+#-1: Fix artifacts in outputted images?
 
 #0: look into loss, training loss v validation loss
 #1: add section to testAccuracy to return accuracy by group
@@ -38,7 +40,9 @@ def testBatch():
 
     # show all images as one image grid
     imagegrid = torchvision.utils.make_grid(images)
-    img = torchvision.transforms.ToPILImage()(imagegrid[0])
+    print(imagegrid.size())
+    #imagegrid = imagegrid.transpose(1,2,0)
+    img = torchvision.transforms.ToPILImage()(imagegrid)
     img.show()
 
     # Show the real labels on the screen
@@ -133,7 +137,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print("The model will be running on", device, "device")
 
-transform_norm = Compose([ToTensor(),Normalize((0.5,0.5),(0.5,0.5))])
+transform_norm = Compose([Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 
 train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
@@ -142,7 +146,7 @@ n_batches = n_train_images/batch_size
 
 test_images = classification_class.ImagesDataset(annotations_file='test_images.csv', img_dir='test/',transform=transform_norm)
 
-
+image,_=train_images[1]
 
 train_loader=DataLoader(train_images, batch_size=batch_size, shuffle=True, num_workers=0)
 test_loader=DataLoader(train_images, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -151,9 +155,11 @@ model = classification_class.Network()
 loss_fn = nn.CrossEntropyLoss()
 optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 
+
+example,label= next(iter(train_loader))
 # Let's build our model
-#train(5)
-#print('Finished Training')
+train(5)
+print('Finished Training')
 
 # Let's load the model we just created and test the accuracy per label
 path = "myFirstModel.pth"
@@ -162,8 +168,12 @@ print('Loaded model')
 
 
 # Test with batch of images
-#testBatch()
+testBatch()
+
+
+"""
 model.eval()
+
 occlusion = Occlusion(model)
 strides = (1,5, 5)               # smaller = more fine-grained attribution but slower
 target=0,                       # AR index
@@ -182,6 +192,7 @@ attribution = occlusion.attribute(example,
                                        target=target,
                                        sliding_window_shapes=sliding_window_shapes,
                                        baselines=baselines)
+
 
 
 from captum.attr import visualization as viz
@@ -211,3 +222,4 @@ _ = viz.visualize_image_attr_multiple(new_attribution_output,
                                       vis_types,
                                       vis_signs,
                                       show_colorbar = True)
+"""
