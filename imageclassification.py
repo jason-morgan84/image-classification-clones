@@ -158,7 +158,7 @@ optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 
 example,label= next(iter(train_loader))
 # Let's build our model
-train(5)
+#train(5)
 print('Finished Training')
 
 # Let's load the model we just created and test the accuracy per label
