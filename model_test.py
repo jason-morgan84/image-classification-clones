@@ -1,7 +1,7 @@
 import torchvision
 import torch
 from sympy import true
-
+from torch.autograd import Variable
 #import image_classification
 
 
@@ -55,7 +55,7 @@ def test_accuracy(model, device, test_loader):
     return accuracy
 
 
-def test_class_accuracy(groups, model, device, test_loader):
+def test_class_accuracy(model, device, test_loader, groups):
 
     model.to(device)
     model.eval()
@@ -67,7 +67,8 @@ def test_class_accuracy(groups, model, device, test_loader):
     with torch.no_grad():
         for data in test_loader:
             images, labels = data
-
+            images = Variable(images.to(device))
+            labels = Variable(labels.to(device))
             # run the model on the test set to predict labels
             outputs = model(images.to(device))
             # the label with the highest energy will be our prediction

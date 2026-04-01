@@ -10,7 +10,7 @@ def train(model, device, train_loader, test_loader, num_epochs):
     model.train()
     model.to(device)
 
-    n_batches = image_classification.n_batches
+    n_batches = 26
     optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_fn = nn.CrossEntropyLoss()
 
