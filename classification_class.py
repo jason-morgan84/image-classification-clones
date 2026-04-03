@@ -20,8 +20,7 @@ class ImagesDataset(Dataset):
         return len(self.img_labels)
 
     def __getitem__(self, idx):
-        image_name = self.img_labels.iloc[idx,0]
-        img_path = os.path.join(self.img_dir, image_name)
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         #reads image - uses io.imread because its a tif, also transposes to proper order for conversion to tensor
         image = read_image(img_path).float()/255
         label = torch.tensor(self.img_labels.iloc[idx, 1])
@@ -29,7 +28,7 @@ class ImagesDataset(Dataset):
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(label)
-        return image, label, image_name
+        return image, label
     
     
 class Network(nn.Module):
