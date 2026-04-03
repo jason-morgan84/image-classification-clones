@@ -17,7 +17,7 @@ def train(model, device, train_loader, test_loader, num_epochs):
     for epoch in range(num_epochs):  # loop over the dataset multiple times
         running_loss = 0.0
         start_time = time.time()
-        for i, (images, labels) in enumerate(train_loader, 0):
+        for i, (images, labels, files) in enumerate(train_loader, 0):
             # get the inputs
             images = Variable(images.to(device))
             labels = Variable(labels.to(device))
