@@ -3,7 +3,6 @@ import numpy as np
 from captum.attr import visualization as viz
 
 def model_occlusion(model,test_image):
-
     model.eval()
     occlusion = Occlusion(model)
 
@@ -13,7 +12,7 @@ def model_occlusion(model,test_image):
     baselines = 0  # values to occlude the image with 0 corresponds to gray
 
     image_output = np.transpose(test_image.squeeze().cpu().detach().numpy(), (1, 2, 0))
-    image_output = image_output * 0.5 + 0.5
+    image_output = image_output * 0.2 + 0.5
 
 
     attribution = occlusion.attribute(test_image,

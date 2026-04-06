@@ -1,7 +1,7 @@
 import torch
 from sympy import true
 from torch.autograd import Variable
-
+import torch.nn as nn
 
 def test_item(model,device,image):
     model.eval()
@@ -15,20 +15,25 @@ def test_accuracy(model, device, test_loader):
     model.eval()
     accuracy = 0.0
     total = 0.0
-
+    criterion = nn.CrossEntropyLoss()
+    val_loss = 0
     with torch.no_grad():
-        for data in test_loader:
+        for n, data in enumerate(test_loader):
+            #print("Testing batch: ", n)
             images, labels, _ = data
             # run the model on the test set to predict labels
             outputs = model(images.to(device))
+            loss = criterion(outputs, labels.to(device))
+            val_loss += loss.item() * labels.size(0)
             # the label with the highest energy will be our prediction
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             accuracy += (predicted == labels.to(device)).sum().item()
 
     # compute the accuracy over all test images
+    val_loss /= len(test_loader.dataset)
     accuracy = (100 * accuracy / total)
-    return accuracy
+    return accuracy, val_loss
 
 
 def test_class_accuracy(model, device, test_loader, groups):
