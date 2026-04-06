@@ -23,14 +23,13 @@ def train(model, device, train_loader, test_loader, num_epochs,n_batches):
         for i, (images, labels, files) in enumerate(train_loader, 0):
             images = Variable(images.to(device))
             labels = Variable(labels.to(device))
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
             # predict classes using images from the training set
             outputs = model(images)
             # compute the loss based on model output and real labels
             loss = criterion(outputs, labels)
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
 
             # backpropagate the loss
             loss.backward()
