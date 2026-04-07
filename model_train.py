@@ -13,10 +13,10 @@ def train(model, device, train_loader, test_loader, num_epochs,n_batches):
     criterion = nn.CrossEntropyLoss()
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.0005, momentum=0.9)
 
-    optimizer = Adam(model.parameters(), lr=0.0001, weight_decay=0.00001)
+    optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     best_accuracy = 0.0
 
-    for epoch in range(num_epochs):  # loop over the dataset multiple times
+    for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
         start_time = time.time()
@@ -44,8 +44,9 @@ def train(model, device, train_loader, test_loader, num_epochs,n_batches):
         print('Epoch {}: Training loss - {}, validation loss - {}, accuracy - {}, time taken - {} seconds' .format(epoch+1,round(running_loss/len(train_loader),3),round(val_loss,3),round(accuracy,0),round(time.time()-start_time),0))
 
         # we want to save the model if the accuracy is the best
-        if accuracy > best_accuracy:
-            torch.save(model.state_dict(), "./myFirstModel.pth")
-            best_accuracy = accuracy
+        #if accuracy > best_accuracy:
+            #torch.save(model.state_dict(), "./myFirstModel.pth")
+            #best_accuracy = accuracy
+        torch.save(model.state_dict(), "./myFirstModel.pth")
 
 
