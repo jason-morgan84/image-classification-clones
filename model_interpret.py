@@ -2,12 +2,13 @@ from captum.attr import Occlusion
 import numpy as np
 from captum.attr import visualization as viz
 
-def model_occlusion(model,test_image):
+def model_occlusion(model,test_image,label):
     model.eval()
+
     occlusion = Occlusion(model)
 
     strides = (3, 9, 9)  # smaller = more fine-grained attribution but slower
-    target = 0,  # AR index
+    target = label,  # AR index
     sliding_window_shapes = (3, 15, 15)  # choose size enough to change object appearance
     baselines = 0  # values to occlude the image with 0 corresponds to gray
 

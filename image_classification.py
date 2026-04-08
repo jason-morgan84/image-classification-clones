@@ -2,22 +2,19 @@ import torch
 import classification_class
 from torchvision.transforms import Compose,Normalize,RandomRotation,Resize
 from torch.utils.data import DataLoader
+import os
+from torchvision.io import read_image
 
 import model_interpret
 import model_test
 import model_train
 
-#-1: Gradient outputs - find exploding or vanishing gradients
-#implement resnet
-########: https://www.digitalocean.com/community/tutorials/writing-resnet-from-scratch-in-pytorch
-#0: more training data
+
 #1: what does captum output mean?
 ########: 1.2: Allow testing/interepretation of chosen images
 ########: 1.3: Test other methods of interpretation
 ########: 1.4: Output probability for given image
-#3: Fix artifacts in outputted images?
-#4 look into more confocal specific models
-#5 how to choose the cnn architecture?
+
 
 training_batch_size = 15
 test_batch_size = 10
@@ -30,27 +27,25 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print("The model will be running on", device, "device")
 
-#transform_norm = Compose([Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-transform_norm = Compose([RandomRotation(180),Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010))])
-#transform_norm = Compose([Resize((224,224)),Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010))])
+transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+#transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010))])
 train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
 n_batches = len(train_images)/training_batch_size
 
 test_images = classification_class.ImagesDataset(annotations_file='test_images.csv', img_dir='test/',transform=transform_norm)
 
 #model = classification_class.ResNet(classification_class.ResidualBlock, [3, 4, 6, 3])
-#model = classification_class.ResNet50(2,3)
+model = classification_class.ResNet50(2,3)
 #model = classification_class.VGG16()
-model = classification_class.BasicNetwork()
+#model = classification_class.BasicNetwork()
 print("Model setup")
 
 
 # Let's build our model
 train_loader=DataLoader(train_images, batch_size=training_batch_size, shuffle=True, num_workers=0)
 test_loader=DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
-#print(len(train_loader))
 print("Images Loaded")
-#model_train.train(model, device, train_loader, test_loader, num_epochs, n_batches)
+model_train.train(model, device, train_loader, test_loader, num_epochs, n_batches)
 print('Finished Training')
 
 
@@ -58,10 +53,6 @@ print('Finished Training')
 path = "myFirstModel.pth"
 model.load_state_dict(torch.load(path))
 print('Loaded model')
-
-
-
-
 
 # Get accuracy of classes:
 test_loader=DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
@@ -75,11 +66,21 @@ print('Real labels: ', ' '.join('%5s' % classes[labels[j]] for j in range(test_b
 print('Predicted: ', ' '.join('%5s' % classes[prediction[j]] for j in range(test_batch_size)))
 
 
+# Model interpretation
 test_loader=DataLoader(test_images, batch_size=1, shuffle=True, num_workers=0)
 image, label, file_name = next(iter(test_loader))
+#path = "samples/"
+#file_name = "51.png"
+#label = 0
+
+#full_path = os.path.join(path, file_name)
+
+#image = read_image(full_path).float()/255
+#image = transform_norm(image).unsqueeze(0)
+
 prediction = model_test.test_item(model, device, image)
-print(file_name[0],"is",classes[label.item()],"and is predicted to be",classes[prediction.item()])
-model_interpret.model_occlusion(model, image.to(device))
+print(file_name,"is",classes[label],"and is predicted to be",classes[prediction.item()])
+model_interpret.model_occlusion(model, image.to(device), label.to(device).item())
 
 
 

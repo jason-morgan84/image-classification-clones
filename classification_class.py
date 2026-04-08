@@ -36,16 +36,16 @@ class BasicNetwork(nn.Module):
     def __init__(self):
         super(BasicNetwork, self).__init__()
         
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=7, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(12)
-        self.conv2 = nn.Conv2d(in_channels=12, out_channels=12, kernel_size=7, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=12, out_channels=12, kernel_size=3, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(12)
         self.pool = nn.MaxPool2d(2,2)
-        self.conv4 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=7, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=3, stride=1, padding=1)
         self.bn4 = nn.BatchNorm2d(24)
-        self.conv5 = nn.Conv2d(in_channels=24, out_channels=24, kernel_size=7, stride=1, padding=1)
+        self.conv5 = nn.Conv2d(in_channels=24, out_channels=24, kernel_size=3, stride=1, padding=1)
         self.bn5 = nn.BatchNorm2d(24)
-        self.fc1 = nn.Linear(24*116*116, 10)
+        self.fc1 = nn.Linear(24*112*112, 2)
 
     def forward(self, input):
         output = F.relu(self.bn1(self.conv1(input)))   
@@ -53,7 +53,7 @@ class BasicNetwork(nn.Module):
         output = self.pool(output)                   
         output = F.relu(self.bn4(self.conv4(output)))     
         output = F.relu(self.bn5(self.conv5(output)))     
-        output = output.view(-1, 24*116*116)
+        output = output.view(-1, 24*112*112)
         output = self.fc1(output)
 
         return output
