@@ -13,7 +13,7 @@ def model_occlusion(model,test_image,label):
     baselines = 0  # values to occlude the image with 0 corresponds to gray
 
     image_output = np.transpose(test_image.squeeze().cpu().detach().numpy(), (1, 2, 0))
-    image_output = image_output * 0.2 + 0.5
+    image_output = image_output * 0.05 + 0.04
 
 
     attribution = occlusion.attribute(test_image,

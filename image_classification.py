@@ -35,7 +35,9 @@ def save_model(file_name):
 
 # Define your execution device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+#transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+#transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.045, 0.037, 0.5), (0.068, 0.053, 0.5))])
+transform_norm = Compose([RandomRotation(180),Resize((224,224))])
 
 # Load training and testing datasets
 train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
