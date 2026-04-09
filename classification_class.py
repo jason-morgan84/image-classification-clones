@@ -173,9 +173,9 @@ class ResidualBlock(nn.Module):
         out = self.relu(out)
         return out
 
-class ResNet(nn.Module):
+class ResNetAlone(nn.Module):
     def __init__(self, block, layers, num_classes = 2):
-        super(ResNet, self).__init__()
+        super(ResNetAlone, self).__init__()
         self.inplanes = 64
         self.conv1 = nn.Sequential(
                         nn.Conv2d(3, 64, kernel_size = 7, stride = 2, padding = 3),

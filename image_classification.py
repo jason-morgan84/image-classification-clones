@@ -10,8 +10,7 @@ import model_test
 import model_train
 
 
-#1: what does captum output mean?
-########: 1.2: Allow testing/interepretation of chosen images
+#1: Model testing and analysis
 ########: 1.3: Test other methods of interpretation
 ########: 1.4: Output probability for given image
 
@@ -19,19 +18,27 @@ import model_train
 training_batch_size = 15
 test_batch_size = 10
 classes = ("AR","ARS")
-num_epochs = 10
+num_epochs = 15
+
+
+def train_model():
+    train_loader = DataLoader(train_images, batch_size=training_batch_size, shuffle=True, num_workers=0)
+    test_loader = DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
+    n_batches = len(train_images) / training_batch_size
+
+    model_train.train(model, device, train_loader, test_loader, num_epochs, n_batches)
+    print('Model Trained')
+
+def save_model(file_name):
+    torch.save(model.state_dict(),file_name)
 
 
 # Define your execution device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-print("The model will be running on", device, "device")
-
 transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-#transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010))])
-train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
-n_batches = len(train_images)/training_batch_size
 
+# Load training and testing datasets
+train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
 test_images = classification_class.ImagesDataset(annotations_file='test_images.csv', img_dir='test/',transform=transform_norm)
 
 #model = classification_class.ResNet(classification_class.ResidualBlock, [3, 4, 6, 3])
@@ -41,16 +48,17 @@ model = classification_class.ResNet50(2,3)
 print("Model setup")
 
 
-# Let's build our model
-train_loader=DataLoader(train_images, batch_size=training_batch_size, shuffle=True, num_workers=0)
-test_loader=DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
-print("Images Loaded")
-model_train.train(model, device, train_loader, test_loader, num_epochs, n_batches)
-print('Finished Training')
+# Train and save model
+#train_model()
+#save_model("./Model.pth")
+
+
+
+
 
 
 # Let's load the model we just created and test the accuracy per label
-path = "myFirstModel.pth"
+path = "Model.pth"
 model.load_state_dict(torch.load(path))
 print('Loaded model')
 
