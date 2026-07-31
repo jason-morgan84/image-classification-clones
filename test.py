@@ -4,31 +4,26 @@ import skimage as ski
 import tifffile as ti # import and export of tif files
 import os
 
-path = (".")
-
-
+path = (".//working")
 
 # walk through given path, find all tif files and add to file_list
-# NOTE: this also includes subfolders
 file_list = []
-for (dirpath, dirnames, filenames) in os.walk(path):
-    for file in filenames:
-        if file[len(file) - 3:] == "tif":
-            file_list.append(os.path.join(dirpath, file).replace("\\","/"))
-
+for file in os.listdir(path):
+    if file[len(file) - 3:] == "tif":
+        file_list.append(file)
 
 # iterate through all files in folder
 for file in file_list:
+    print(file)
     # input image to np array in the form slice, channel, y, x
-    input_image = ti.imread(file)
+    input_image = ti.imread(path+"//"+file)
 
-    #print(input_image.shape)
+    print(input_image.shape)
     n_slices, n_channels, height, width = input_image.shape
 
     # define variables for segmenting clones
     GFP_channel = 1
-    sigma = 10
-    open = 2
+    sigma = 8
     dilation_radius = 5
     min_area = 10000
 
@@ -46,11 +41,13 @@ for file in file_list:
     thresholded_image = ski.morphology.dilation(thresholded_image,footprint=[(np.ones((dilation_radius, 1)), 1), (np.ones((1, dilation_radius)), 1)])
     thresholded_image = ski.morphology.remove_small_holes(thresholded_image)
 
+    PilImage.fromarray(thresholded_image).show()
+
     # label image, remove any labelled regions below size threshold then relabel sequentially
     labelled_image = ski.morphology.label(thresholded_image, connectivity=1)
     labelled_image = ski.morphology.remove_small_objects(labelled_image, max_size = min_area)
     labelled_image,_,_ = ski.segmentation.relabel_sequential(labelled_image)
-
+    print(labelled_image.max())
     # define np array of images of all output regions in the format: labelled region, channel, y, x
     output_images = np.zeros((labelled_image.max(),n_channels,height,width))
 
@@ -72,7 +69,8 @@ for file in file_list:
     #output images to multi dimensional tifs
     for n, image in enumerate(output_images):
         output_file_name = file[:len(file) - 4] + " " + str(n) + ".tif"
+        print(output_file_name)
         ti.imwrite(output_file_name, image, photometric='minisblack')
 
-for channel in output_images[1]:
-    PilImage.fromarray(channel).show()
+#for channel in output_images[1]:
+    #PilImage.fromarray(channel).show()
