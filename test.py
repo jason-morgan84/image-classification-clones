@@ -8,18 +8,116 @@ path = (".//working")
 path = (".//")
 
 #define output options
-#TODO: update output size to take into account desired channels etc
-channels = (2, 4)
-output_size = (4, 512, 512)
-output_cropped = True
-pad_cropped = True
+channels = (1, 3)
+output_size = (512, 512)
 
-# define variables for segmenting clones
+# define input variables
 GFP_channel = 1
+
+# define segmentation variables
 sigma = 8
 dilation_radius = 5
 min_area = 10000
 
+def select_channels(image, output_channels, channel_of_interest):
+
+
+    channels, _, _ = image.shape
+    channels_for_deletion = []
+    channel_of_interest_reduction = 0
+    for i in range(channels):
+        if i not in output_channels:
+            channels_for_deletion.append(i)
+            if i < channel_of_interest: channel_of_interest_reduction += 1
+    channel_of_interest -= channel_of_interest_reduction
+    
+    return np.delete(image,channels_for_deletion, axis = 0), channel_of_interest, len(output_channels)
+
+def segment (image, channel, sigma, dilation_radius, min_area):
+
+    image_channel = image[channel]
+
+    # apply gaussian filter then get threshold value and threshold
+    image_gauss = ski.filters.gaussian(image_channel, sigma) * 255 
+    threshold = ski.filters.threshold_triangle(image_gauss)
+    image_thresholded = image_gauss > threshold
+
+    # dilate thresholded image to include surrounding regions and join up clones with small gaps that are likely to be single clones
+    # then remove holes within thresholded regions
+    image_thresholded = ski.morphology.dilation(image_thresholded,footprint=[(np.ones((dilation_radius, 1)), 1), (np.ones((1, dilation_radius)), 1)])
+    image_thresholded = ski.morphology.remove_small_holes(image_thresholded)
+
+    #PilImage.fromarray(thresholded_image).show()
+
+    # label image, remove any labelled regions below size threshold then relabel sequentially
+    image_labelled = ski.morphology.label(image_thresholded, connectivity=1)
+    image_labelled = ski.morphology.remove_small_objects(image_labelled, max_size = min_area)
+    image_labelled,_,_ = ski.segmentation.relabel_sequential(image_labelled)
+
+    return image_labelled
+
+def isolate_segments (image, image_labelled, height, width, n_channels): # outputs in format syxc
+
+    n_labels = image_labelled.max()   
+    isolated_segments = [np.zeros((height, width, n_channels)) for _ in range(n_labels)]
+
+    # define np array of images of all output regions in the format: labelled region, channel, y, x
+    #isolated_segments = np.zeros((image_labelled.max(), height, width, n_channels))
+
+    # for isolating regions, transpose input images from cyx to yxc
+    image = image.transpose(1,2,0)
+
+    # go through each cell of the labelled image - if the value is not 0 (ie, there is a label there) add all channel values from max projected input
+    # to output image for relevant labelled region
+    for y, row in enumerate(image_labelled):
+        for x, column in enumerate(row):
+            if column != 0:
+                isolated_segments[column - 1][y][x] = image[y][x]
+
+    return isolated_segments
+
+def crop_segments (image_segments, # 4D np array of original image divided into segmented regions in the format syxc
+                   label_properties): # properties of segmented regions
+
+    output_images=[]
+
+    #gets properties of all labels
+    
+    for n, label in enumerate(label_properties):
+        # for each label, gets bounding box and crops image to that region
+        min_row, min_col, max_row, max_col = label.bbox
+        new_image = np.array(image_segments[n][min_row:max_row, min_col:max_col])
+        output_images.append(np.array(new_image))
+
+    return output_images
+
+def pad_cropped_segments (image_segments, 
+                          height, 
+                          width, 
+                          label_properties):
+        # if centre cropped image is true, gets how much the images need padding to match original dimensions, transposes back to CYX
+        # then goes through each channel and pads the image
+        output_images = []
+        for n, label in enumerate(label_properties):
+            min_row, min_col, max_row, max_col = label.bbox
+
+            padding_y = height - (max_row - min_row)
+            padding_x = width - (max_col - min_col)
+            padded_image=[]
+            for channel in image_segments[n].transpose(2, 0, 1):
+                new_channel = np.pad(channel, 
+                                     ((padding_y // 2, padding_y // 2 + padding_y % 2), 
+                                      (padding_x // 2, padding_x // 2 + padding_x % 2)))
+                padded_image.append(new_channel)
+
+            output_images.append(padded_image)
+        return np.array(output_images).transpose(0, 2, 3, 1)
+
+def resize (image, size, channels):
+    output_images = []
+    for item in image:
+        output_images.append(ski.transform.resize(item.transpose(2, 0, 1), (channels,) + size))
+    return output_images
 
 # walk through given path, find all tif files and add to file_list
 file_list = []
@@ -35,90 +133,39 @@ for file in file_list:
 
     n_slices, n_channels, height, width = input_image.shape
 
-    # max project image and get max projected GFP channel for segmentation
-    maxproject = np.max(input_image, axis=0)
-    maxproject_for_threshold = maxproject[GFP_channel]
+    # max project image and get max projected GFP channel for segmentation {cyx}
+    maxproject = np.max(input_image, axis = 0)
 
-    # apply gaussian filter then get threshold value and threshold
-    maxproject_gauss = ski.filters.gaussian(maxproject_for_threshold, sigma) * 255 
-    threshold = ski.filters.threshold_triangle(maxproject_gauss)
-    thresholded_image = maxproject_gauss > threshold
+    # remove channels that aren't of interest {cyx}
+    maxproject_sliced, GFP_channel, n_channels = select_channels(maxproject, channels, GFP_channel)
 
-    # dilate thresholded image to include surrounding regions and join up clones with small gaps that are likely to be single clones
-    # then remove holes within thresholded regions
-    thresholded_image = ski.morphology.dilation(thresholded_image,footprint=[(np.ones((dilation_radius, 1)), 1), (np.ones((1, dilation_radius)), 1)])
-    thresholded_image = ski.morphology.remove_small_holes(thresholded_image)
-
-    #PilImage.fromarray(thresholded_image).show()
-
-    # label image, remove any labelled regions below size threshold then relabel sequentially
-    labelled_image = ski.morphology.label(thresholded_image, connectivity=1)
-    labelled_image = ski.morphology.remove_small_objects(labelled_image, max_size = min_area)
-    labelled_image,_,_ = ski.segmentation.relabel_sequential(labelled_image)
-
+    # label max projected image {yx} and get properties of labels
+    labelled_image = segment(maxproject_sliced, GFP_channel, sigma, dilation_radius, min_area) 
     label_properties = ski.measure.regionprops(labelled_image)
 
-    # define np array of images of all output regions in the format: labelled region, channel, y, x
-    isolated_segments = np.zeros((labelled_image.max(),n_channels,height,width))
+    # for each segment, returns image with only content in the the region corresponding to that segment
+    # returns a list of regions. each region is a numpy array in the format {yxc}
+    isolated_segments = isolate_segments(maxproject_sliced, labelled_image, height, width, n_channels) 
 
-    # for isolating regions, transpose output images and maxprojected images from (label), channel, y, x to (label), y, x channel
-    isolated_segments = isolated_segments.transpose((0,2,3,1))
-    maxproject = maxproject.transpose(1,2,0)
+    # for each isolated segment, crops down to the bounding box of that segment
+    cropped_segments = crop_segments(isolated_segments, label_properties)
 
-    # go through each cell of the labelled image - if the value is not 0 (ie, there is a label there) add all channel values from max projected input
-    # to output image for relevant labelled region
-    for y, row in enumerate(labelled_image):
-        for x, column in enumerate(row):
-            if column != 0:
-                isolated_segments[column - 1][y][x] = maxproject[y][x]
+    # pads cropped segments so isolated region is central
+    padded_segments = pad_cropped_segments(cropped_segments, height, width, label_properties)
 
-    #if output is cropped to segments
-    if output_cropped == True:
-        output_images=[]
+    # resizes image to desired dimensions
+    output_image = resize(padded_segments, output_size, n_channels) 
 
-        #gets properties of all labels
-        label_properties = ski.measure.regionprops(labelled_image)
-        for n, label in enumerate(label_properties):
-            # for each label, gets bounding box and crops image to that region
-            min_row, min_col, max_row, max_col = label.bbox
-            new_image = np.array(isolated_segments[n][min_row:max_row, min_col:max_col])
-
-            # if centre cropped image is true, gets how much the images need padding to match original dimensions, transposes back to CYX
-            # then goes through each channel and pads the image
-            if pad_cropped == True:
-                padding_y = height - (max_row - min_row)
-                padding_x = width - (max_col - min_col)
-                new_image = new_image.transpose(2,0,1)
-                padded_image=[]
-                for channel in new_image:
-                    new_channel = np.pad(channel,((padding_y//2, padding_y//2 + padding_y%2), (padding_x//2, padding_x//2 + padding_x%2)))
-                    padded_image.append(new_channel)
-
-                output_images.append(np.array(padded_image))
-            else:
-                output_images.append(new_image.transpose(2,0,1))
-
-
-    else:
-        output_images = isolated_segments.transpose(0,3,1,2)
-
-
-    # undo transposition for output images and maxproject, leaving them in shape (region), channel, y, x
-    isolated_segments = isolated_segments.transpose(0,3,1,2)
-    maxproject = maxproject.transpose(2,0,1)
-
-
-    if output_size != (height, width):
-        print("resize")
 
 
 
 
     #output images to multi dimensional tifs
-    for n, image in enumerate(output_images):
+    for n, image in enumerate(output_image):
         output_file_name = file[:len(file) - 4] + " " + str(n) + ".tif"
         print(output_file_name)
-        ti.imwrite(os.path.join("./output",output_file_name), ski.transform.resize(image,output_size), photometric='minisblack', metadata={"axes": "CYX"})
+        ti.imwrite(os.path.join("./output",output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
 
+        
 #for channel in output_images[1]:
     #PilImage.fromarray(channel).show()
