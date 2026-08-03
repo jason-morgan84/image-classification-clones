@@ -39,7 +39,6 @@ def segment (image, channel, sigma, dilation_radius, min_area):
     image_gauss = ski.filters.gaussian(image_channel, sigma) * 255 
     threshold = ski.filters.threshold_otsu(image_gauss)
     image_thresholded = image_gauss > threshold
-    print(threshold)
 
     # dilate thresholded image to include surrounding regions and join up clones with small gaps that are likely to be single clones
     # then remove holes within thresholded regions
@@ -49,9 +48,10 @@ def segment (image, channel, sigma, dilation_radius, min_area):
     PilImage.fromarray(image_thresholded).show()
 
     # label image, remove any labelled regions below size threshold then relabel sequentially
-    image_labelled = ski.morphology.label(image_thresholded, connectivity=1)
+    image_labelled = ski.morphology.label(image_thresholded, connectivity = 1)
     image_labelled = ski.morphology.remove_small_objects(image_labelled, max_size = min_area)
     image_labelled,_,_ = ski.segmentation.relabel_sequential(image_labelled)
+    print (image_labelled.max())
 
     return image_labelled
 
@@ -138,7 +138,6 @@ dilation_radius = 5
 min_area = 10000
 
 input_file_list = []
-output_file_list = []
 #open csv with file information and process into list of file_data class
 with open(path_input, "r") as input_file:
     _ = input_file.readline()
@@ -149,6 +148,10 @@ with open(path_input, "r") as input_file:
         input_file_list.append(new_file)
 
 # iterate through all files in folder
+
+with open(os.path.join(path_output_csv,"output.csv"), "w") as output_file:
+    output_file.writelines("genotype,date,name,ID,location\n")
+
 for file in input_file_list:
     print(file)
     # input image to np array in the form slice, channel, y, x
@@ -165,10 +168,13 @@ for file in input_file_list:
     # label max projected image {yx} and get properties of labels
     labelled_image = segment(maxproject_sliced, GFP_channel, sigma, dilation_radius, min_area) 
     label_properties = ski.measure.regionprops(labelled_image)
+    print(label_properties)
 
     # for each segment, returns image with only content in the the region corresponding to that segment
     # returns a list of regions. each region is a numpy array in the format {yxc}
-    isolated_segments = isolate_segments(maxproject_sliced, labelled_image, height, width, n_channels) 
+    isolated_segments = isolate_segments(maxproject_sliced, labelled_image, height, width, n_channels)
+    if len(isolated_segments) == 0:
+        continue
 
     # for each isolated segment, crops down to the bounding box of that segment
     cropped_segments = crop_segments(isolated_segments, label_properties)
@@ -180,16 +186,12 @@ for file in input_file_list:
     output_image = resize(padded_segments, output_size, n_channels) 
 
     #output images to multi dimensional tifs
-    for n, image in enumerate(output_image):
-        output_file_name = file.name[:len(file.name)] + " " + str(n) + ".tif"
-        print(output_file_name)
-        ti.imwrite(os.path.join(path_output_images,output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
-        output_file_list.append(file_data(file.genotype,file.date,file.name,os.path.join(path_output_images,output_file_name), ID = str(n)))
-
-with open(os.path.join(path_output_csv,"output.csv"), "w") as output_file:
-    output_file.writelines("genotype,date,name,ID,location\n")
-    for item in output_file_list:
-        output_file.writelines(",".join([item.genotype, item.date, item.name, item.ID, item.location+"\n"]))
+    with open(os.path.join(path_output_csv,"output.csv"), "a") as output_file:
+        for n, image in enumerate(output_image):
+            output_file_name = file.name[:len(file.name)] + " " + str(n) + ".tif"
+            print(output_file_name)
+            ti.imwrite(os.path.join(path_output_images,output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
+            output_file.writelines(",".join([file.genotype, file.date, file.name, str(n), os.path.join(path_output_images,output_file_name)+"\n"]))
 
 
 
