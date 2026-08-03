@@ -5,13 +5,13 @@ import tifffile as ti # import and export of tif files
 import os
 
 
-
 class file_data():
-    def __init__(self, genotype, date, name, location):
+    def __init__(self, genotype, date, name, location, **kwargs):
         self.genotype = genotype
         self.date = date
         self.name = name
         self.location = location
+        self.ID = kwargs.get('ID',None)
 
 
     def __str__(self):
@@ -37,15 +37,16 @@ def segment (image, channel, sigma, dilation_radius, min_area):
 
     # apply gaussian filter then get threshold value and threshold
     image_gauss = ski.filters.gaussian(image_channel, sigma) * 255 
-    threshold = ski.filters.threshold_triangle(image_gauss)
+    threshold = ski.filters.threshold_otsu(image_gauss)
     image_thresholded = image_gauss > threshold
+    print(threshold)
 
     # dilate thresholded image to include surrounding regions and join up clones with small gaps that are likely to be single clones
     # then remove holes within thresholded regions
     image_thresholded = ski.morphology.dilation(image_thresholded,footprint=[(np.ones((dilation_radius, 1)), 1), (np.ones((1, dilation_radius)), 1)])
     image_thresholded = ski.morphology.remove_small_holes(image_thresholded)
 
-    #PilImage.fromarray(thresholded_image).show()
+    PilImage.fromarray(image_thresholded).show()
 
     # label image, remove any labelled regions below size threshold then relabel sequentially
     image_labelled = ski.morphology.label(image_thresholded, connectivity=1)
@@ -117,10 +118,12 @@ def resize (image, size, channels):
         output_images.append(ski.transform.resize(item.transpose(2, 0, 1), (channels,) + size))
     return output_images
 
+#TODO: Consider thresholding methods - is it possible to include a custom version of skimage triangle threshold method?
+
 # file location variables
-path_input = "./files.csv"
-path_output_csv = "./"
-path_output_images = "./output"
+path_input = ".\\files2.csv"
+path_output_csv = ".\\"
+path_output_images = ".\\output"
 
 # output options
 channels = (1, 3)
@@ -134,8 +137,8 @@ sigma = 8
 dilation_radius = 5
 min_area = 10000
 
-file_list = []
-
+input_file_list = []
+output_file_list = []
 #open csv with file information and process into list of file_data class
 with open(path_input, "r") as input_file:
     _ = input_file.readline()
@@ -143,10 +146,10 @@ with open(path_input, "r") as input_file:
     for line in input_file:
         genotype, date, name, location = tuple(line.rstrip().split(","))
         new_file = file_data(genotype, date, name, location)
-        file_list.append(new_file)
+        input_file_list.append(new_file)
 
 # iterate through all files in folder
-for file in file_list:
+for file in input_file_list:
     print(file)
     # input image to np array in the form slice, channel, y, x
     input_image = ti.imread(file.location)
@@ -178,9 +181,17 @@ for file in file_list:
 
     #output images to multi dimensional tifs
     for n, image in enumerate(output_image):
-        output_file_name = file.name[:len(file.name) - 4] + " " + str(n) + ".tif"
+        output_file_name = file.name[:len(file.name)] + " " + str(n) + ".tif"
         print(output_file_name)
-        ti.imwrite(os.path.join("./output",output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
+        ti.imwrite(os.path.join(path_output_images,output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
+        output_file_list.append(file_data(file.genotype,file.date,file.name,os.path.join(path_output_images,output_file_name), ID = str(n)))
+
+with open(os.path.join(path_output_csv,"output.csv"), "w") as output_file:
+    output_file.writelines("genotype,date,name,ID,location\n")
+    for item in output_file_list:
+        output_file.writelines(",".join([item.genotype, item.date, item.name, item.ID, item.location+"\n"]))
+
+
 
         
 #for channel in output_images[1]:
