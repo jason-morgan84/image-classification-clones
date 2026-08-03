@@ -4,20 +4,18 @@ import skimage as ski
 import tifffile as ti # import and export of tif files
 import os
 
-path = (".//working")
-path = (".//")
 
-#define output options
-channels = (1, 3)
-output_size = (512, 512)
 
-# define input variables
-GFP_channel = 1
+class file_data():
+    def __init__(self, genotype, date, name, location):
+        self.genotype = genotype
+        self.date = date
+        self.name = name
+        self.location = location
 
-# define segmentation variables
-sigma = 8
-dilation_radius = 5
-min_area = 10000
+
+    def __str__(self):
+        return ", ".join((self.genotype,self.date,self.name,self.location))
 
 def select_channels(image, output_channels, channel_of_interest):
 
@@ -119,17 +117,39 @@ def resize (image, size, channels):
         output_images.append(ski.transform.resize(item.transpose(2, 0, 1), (channels,) + size))
     return output_images
 
-# walk through given path, find all tif files and add to file_list
+# file location variables
+path_input = "./files.csv"
+path_output_csv = "./"
+path_output_images = "./output"
+
+# output options
+channels = (1, 3)
+output_size = (512, 512)
+
+# input variables
+GFP_channel = 1
+
+# segmentation variables
+sigma = 8
+dilation_radius = 5
+min_area = 10000
+
 file_list = []
-for file in os.listdir(path):
-    if file[len(file) - 3:] == "tif":
-        file_list.append(file)
+
+#open csv with file information and process into list of file_data class
+with open(path_input, "r") as input_file:
+    _ = input_file.readline()
+
+    for line in input_file:
+        genotype, date, name, location = tuple(line.rstrip().split(","))
+        new_file = file_data(genotype, date, name, location)
+        file_list.append(new_file)
 
 # iterate through all files in folder
 for file in file_list:
     print(file)
     # input image to np array in the form slice, channel, y, x
-    input_image = ti.imread(path+"//"+file)
+    input_image = ti.imread(file.location)
 
     n_slices, n_channels, height, width = input_image.shape
 
@@ -156,13 +176,9 @@ for file in file_list:
     # resizes image to desired dimensions
     output_image = resize(padded_segments, output_size, n_channels) 
 
-
-
-
-
     #output images to multi dimensional tifs
     for n, image in enumerate(output_image):
-        output_file_name = file[:len(file) - 4] + " " + str(n) + ".tif"
+        output_file_name = file.name[:len(file.name) - 4] + " " + str(n) + ".tif"
         print(output_file_name)
         ti.imwrite(os.path.join("./output",output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
 
