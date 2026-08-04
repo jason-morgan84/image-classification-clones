@@ -5,6 +5,7 @@ import tifffile as ti # import and export of tif files
 import os
 
 
+
 class file_data():
     def __init__(self, genotype, date, name, location, **kwargs):
         self.genotype = genotype
@@ -37,7 +38,7 @@ def segment (image, channel, sigma, dilation_radius, min_area):
 
     # apply gaussian filter then get threshold value and threshold
     image_gauss = ski.filters.gaussian(image_channel, sigma) * 255 
-    threshold = ski.filters.threshold_otsu(image_gauss)
+    threshold = ski.filters.threshold_triangle(image_gauss) + 2 #triangle in imagej consistently gives 2-3 higher threshold than through other algorithms
     image_thresholded = image_gauss > threshold
 
     # dilate thresholded image to include surrounding regions and join up clones with small gaps that are likely to be single clones
@@ -118,8 +119,6 @@ def resize (image, size, channels):
         output_images.append(ski.transform.resize(item.transpose(2, 0, 1), (channels,) + size))
     return output_images
 
-#TODO: Consider thresholding methods - is it possible to include a custom version of skimage triangle threshold method?
-
 # file location variables
 path_input = ".\\files2.csv"
 path_output_csv = ".\\"
@@ -165,6 +164,12 @@ for file in input_file_list:
     # remove channels that aren't of interest {cyx}
     maxproject_sliced, GFP_channel, n_channels = select_channels(maxproject, channels, GFP_channel)
 
+    import threshold
+    threshold.triangle_unnormalised(maxproject_sliced[GFP_channel])
+
+    print(ski.filters.threshold_triangle(maxproject_sliced[GFP_channel]))
+
+   
     # label max projected image {yx} and get properties of labels
     labelled_image = segment(maxproject_sliced, GFP_channel, sigma, dilation_radius, min_area) 
     label_properties = ski.measure.regionprops(labelled_image)
@@ -192,7 +197,7 @@ for file in input_file_list:
             print(output_file_name)
             ti.imwrite(os.path.join(path_output_images,output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
             output_file.writelines(",".join([file.genotype, file.date, file.name, str(n), os.path.join(path_output_images,output_file_name)+"\n"]))
-
+    
 
 
         
