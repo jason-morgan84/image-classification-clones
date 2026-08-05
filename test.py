@@ -3,6 +3,7 @@ import numpy as np
 import skimage as ski
 import tifffile as ti # import and export of tif files
 import os
+import czifile
 
 
 
@@ -38,7 +39,8 @@ def segment (image, channel, sigma, dilation_radius, min_area):
 
     # apply gaussian filter then get threshold value and threshold
     image_gauss = ski.filters.gaussian(image_channel, sigma) * 255 
-    threshold = ski.filters.threshold_triangle(image_gauss) + 2 #triangle in imagej consistently gives 2-3 higher threshold than through other algorithms
+    #triangle in imagej consistently gives 2-3 higher threshold than through other algorithms
+    threshold = ski.filters.threshold_otsu(image_gauss) + 2 
     image_thresholded = image_gauss > threshold
 
     # dilate thresholded image to include surrounding regions and join up clones with small gaps that are likely to be single clones
@@ -46,13 +48,12 @@ def segment (image, channel, sigma, dilation_radius, min_area):
     image_thresholded = ski.morphology.dilation(image_thresholded,footprint=[(np.ones((dilation_radius, 1)), 1), (np.ones((1, dilation_radius)), 1)])
     image_thresholded = ski.morphology.remove_small_holes(image_thresholded)
 
-    PilImage.fromarray(image_thresholded).show()
+    #PilImage.fromarray(image_thresholded).show()
 
     # label image, remove any labelled regions below size threshold then relabel sequentially
     image_labelled = ski.morphology.label(image_thresholded, connectivity = 1)
     image_labelled = ski.morphology.remove_small_objects(image_labelled, max_size = min_area)
     image_labelled,_,_ = ski.segmentation.relabel_sequential(image_labelled)
-    print (image_labelled.max())
 
     return image_labelled
 
@@ -133,7 +134,7 @@ GFP_channel = 1
 
 # segmentation variables
 sigma = 8
-dilation_radius = 5
+dilation_radius = 10
 min_area = 10000
 
 input_file_list = []
@@ -149,12 +150,22 @@ with open(path_input, "r") as input_file:
 # iterate through all files in folder
 
 with open(os.path.join(path_output_csv,"output.csv"), "w") as output_file:
-    output_file.writelines("genotype,date,name,ID,location\n")
+    output_file.writelines("genotype,date,name,input_location,clone,output_location\n")
 
-for file in input_file_list:
-    print(file)
+for file_number, file in enumerate(input_file_list):
+    print(file.location, "(",file_number,"of",len(input_file_list),")")
     # input image to np array in the form slice, channel, y, x
-    input_image = ti.imread(file.location)
+    ending = file.location[len(file.location)-4:]
+    try:
+        if ending == ".tif" or ending == "tiff":
+            input_image = ti.imread(file.location)
+        elif ending ==".czi":
+            input_image = czifile.imread(file.location).transpose(1, 0, 2, 3)
+        else:
+            print("Unsupported file type")
+            continue
+    except:
+        print("File cannot be opened")
 
     n_slices, n_channels, height, width = input_image.shape
 
@@ -163,22 +174,16 @@ for file in input_file_list:
 
     # remove channels that aren't of interest {cyx}
     maxproject_sliced, GFP_channel, n_channels = select_channels(maxproject, channels, GFP_channel)
-
-    import threshold
-    threshold.triangle_unnormalised(maxproject_sliced[GFP_channel])
-
-    print(ski.filters.threshold_triangle(maxproject_sliced[GFP_channel]))
-
-   
+ 
     # label max projected image {yx} and get properties of labels
     labelled_image = segment(maxproject_sliced, GFP_channel, sigma, dilation_radius, min_area) 
     label_properties = ski.measure.regionprops(labelled_image)
-    print(label_properties)
 
     # for each segment, returns image with only content in the the region corresponding to that segment
     # returns a list of regions. each region is a numpy array in the format {yxc}
     isolated_segments = isolate_segments(maxproject_sliced, labelled_image, height, width, n_channels)
     if len(isolated_segments) == 0:
+        print("No clones found")
         continue
 
     # for each isolated segment, crops down to the bounding box of that segment
@@ -193,12 +198,12 @@ for file in input_file_list:
     #output images to multi dimensional tifs
     with open(os.path.join(path_output_csv,"output.csv"), "a") as output_file:
         for n, image in enumerate(output_image):
-            output_file_name = file.name[:len(file.name)] + " " + str(n) + ".tif"
+            output_file_name = str(file_number) + "c" + str(n) + ".tif"
             print(output_file_name)
             ti.imwrite(os.path.join(path_output_images,output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
-            output_file.writelines(",".join([file.genotype, file.date, file.name, str(n), os.path.join(path_output_images,output_file_name)+"\n"]))
+            output_file.writelines(",".join([file.genotype, file.date, file.name, file.location, str(n), os.path.abspath(os.path.join(path_output_images,output_file_name))+"\n"]))
     
-
+#genotype, date, name, input_location, clone, output_location
 
         
 #for channel in output_images[1]:
