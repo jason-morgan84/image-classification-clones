@@ -121,13 +121,13 @@ def resize (image, size, channels):
     return output_images
 
 # file location variables
-path_input = ".\\files2.csv"
+path_input = ".\\ar_ars_file_list.csv"
 path_output_csv = ".\\"
 path_output_images = ".\\output"
 
 # output options
 channels = (1, 3)
-output_size = (512, 512)
+output_size = (256, 256)
 
 # input variables
 GFP_channel = 1
