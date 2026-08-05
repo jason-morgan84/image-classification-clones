@@ -121,9 +121,9 @@ def resize (image, size, channels):
     return output_images
 
 # file location variables
-path_input = ".\\ar_ars_file_list.csv"
-path_output_csv = ".\\"
-path_output_images = ".\\output"
+path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list.csv"
+path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260805"
+path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260805"
 
 # output options
 channels = (1, 3)
@@ -146,6 +146,9 @@ with open(path_input, "r") as input_file:
         genotype, date, name, location = tuple(line.rstrip().split(","))
         new_file = file_data(genotype, date, name, location)
         input_file_list.append(new_file)
+
+if not os.path.exists(path_output_images):
+    os.makedirs(path_output_images)
 
 # iterate through all files in folder
 
@@ -200,7 +203,7 @@ for file_number, file in enumerate(input_file_list):
         for n, image in enumerate(output_image):
             output_file_name = str(file_number) + "c" + str(n) + ".tif"
             print(output_file_name)
-            ti.imwrite(os.path.join(path_output_images,output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
+            ti.imwrite(os.path.join(path_output_images, output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
             output_file.writelines(",".join([file.genotype, file.date, file.name, file.location, str(n), os.path.abspath(os.path.join(path_output_images,output_file_name))+"\n"]))
     
 #genotype, date, name, input_location, clone, output_location
