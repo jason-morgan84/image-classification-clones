@@ -21,31 +21,31 @@ def train(model, device, train_loader, test_loader, num_epochs,n_batches):
         model.train()
         running_loss = 0.0
         start_time = time.time()
-        for i, (images, labels, files) in enumerate(train_loader, 0):
-            images = Variable(images.to(device))
-            labels = Variable(labels.to(device))
+        for data in train_loader:
+            images = Variable(data['image'].to(device))
+            labels = Variable(data['image_class'].to(device))
 
             #normalize by batch
-            sum_mean=0
-            sum_sd=0
+            sum_mean = 0
+            sum_sd = 0
             for image in images:
                 mean_sd = torch.std_mean(image)
-                sum_mean+=mean_sd[0].item()
+                sum_mean += mean_sd[0].item()
                 sum_sd += mean_sd[1].item()
             mean = sum_mean/len(images)
             sd = sum_sd/len(images)
             transform_norm = Compose([Normalize(mean, sd)])
 
             # get normalized image
-            for image in enumerate(images):
-                image = transform_norm(image)
+            #for image in images:
+               # image = transform_norm(image)
 
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # predict classes using images from the training set
-            outputs = model(images)
+            outputs = model(transform_norm(images))
             # compute the loss based on model output and real labels
             loss = criterion(outputs, labels)
 

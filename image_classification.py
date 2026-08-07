@@ -1,4 +1,6 @@
 import torch
+from matplotlib.rcsetup import validate_int_or_None
+
 import classification_class
 from torchvision.transforms import Compose,Normalize,RandomRotation,Resize
 from torch.utils.data import DataLoader
@@ -18,18 +20,30 @@ import model_train
 #       Update RESNET models to be include 1/2/3/4 channels of 8bit greyscale data
 
 training_batch_size = 15
-test_batch_size = 10
-classes = ("AR","ARS")
+validation_batch_size = 10
+test_batch_size = 5
+
+classes = ("AR", "ARS")
 num_epochs = 15
+model_save_name = "model.pth"
+model_save_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/models"
 
 image_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
 
 def train_model():
-    train_loader = DataLoader(train_images, batch_size=training_batch_size, shuffle=True, num_workers=0)
-    test_loader = DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
-    n_batches = len(train_images) / training_batch_size
+    train_loader = DataLoader(dataset = training_images,
+                              batch_size = training_batch_size,
+                              shuffle=True,
+                              num_workers=0)
 
-    model_train.train(model, device, train_loader, test_loader, num_epochs, n_batches)
+    validation_loader = DataLoader(dataset = validation_images,
+                                   batch_size = validation_batch_size,
+                                   shuffle=True,
+                                   num_workers=0)
+
+    n_batches = len(training_images) / training_batch_size
+
+    model_train.train(model, device, train_loader, validation_loader, num_epochs, n_batches)
     print('Model Trained')
 
 def save_model(file_name):
@@ -46,9 +60,11 @@ transform_norm = Compose([RandomRotation(180),Resize((224,224))])
 training_images = classification_class.ImagesDataset(annotations_file='training.csv',
                                                   img_dir = os.path.join(image_location, "training/"),
                                                   transform = transform_norm)
+
 testing_images = classification_class.ImagesDataset(annotations_file='testing.csv',
                                                  img_dir= os.path.join(image_location, "testing/"),
                                                  transform = transform_norm)
+
 validation_images = classification_class.ImagesDataset(annotations_file='validation.csv',
                                                  img_dir= os.path.join(image_location, "validation/"),
                                                  transform = transform_norm)
@@ -61,8 +77,9 @@ print("Model setup")
 
 
 # Train and save model
-#train_model()
-#save_model("./Model.pth")
+train_model()
+#TODO: update file name to include key information
+save_model(os.path.join(model_save_location, model_save_name))
 
 
 
@@ -70,9 +87,9 @@ print("Model setup")
 
 
 # Let's load the model we just created and test the accuracy per label
-path = "Model.pth"
-model.load_state_dict(torch.load(path))
-print('Loaded model')
+#path = "Model.pth"
+#model.load_state_dict(torch.load(path))
+#print('Loaded model')
 
 # Get accuracy of classes:
 test_loader = DataLoader(test_images, batch_size = test_batch_size, shuffle=True, num_workers=0)

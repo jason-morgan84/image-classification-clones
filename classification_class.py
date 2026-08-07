@@ -4,14 +4,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 import os
 import torch
+import tifffile as tiff
 from torchvision.io import read_image
 
 
 class ImagesDataset(Dataset):
 
-    def __init__(self, annotations_file, img_dir,transform=None, target_transform=None):
+    def __init__(self, annotations_file, img_dir,transform = None, target_transform = None):
 
-        self.img_labels = pd.read_csv(img_dir + annotations_file, header=None)
+        self.img_labels = pd.DataFrame(pd.read_csv(os.path.join(img_dir, annotations_file)))
+
+        #TODO - update this to work with variable class names and id defined in main module
+        self.img_labels['class'] = [0 if item == 'AR' else 1 for item in self.img_labels['genotype']]
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
@@ -20,16 +24,24 @@ class ImagesDataset(Dataset):
         return len(self.img_labels)
 
     def __getitem__(self, idx):
-        image_name = self.img_labels.iloc[idx,0]
-        img_path = os.path.join(self.img_dir, image_name)
+        file_name = self.img_labels['image_id'][idx]
+        #genotype = torch.tensor(self.img_labels.iloc[idx, 0])
+        genotype = self.img_labels['genotype'][idx]
+        image_class = self.img_labels['class'][idx]
+        date = self.img_labels['date'][idx]
+        clone_id = self.img_labels['clone'][idx]
+        original_image_file = self.img_labels.iloc[idx, 4]
+
+        img_path = os.path.join(self.img_dir, file_name + ".tif")
         #reads image - uses io.imread because its a tif, also transposes to proper order for conversion to tensor
-        image = read_image(img_path).float()/255
-        label = torch.tensor(self.img_labels.iloc[idx, 1])
+        image = torch.from_numpy(tiff.imread(img_path))
+
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
-            label = self.target_transform(label)
-        return image, label, image_name
+            label = self.target_transform(image_class)
+        return {'image': image, 'genotype': genotype, 'image_class': image_class, 'date': date, 'clone_id': clone_id, 'original_image_file': original_image_file}
+        #return image, image_class
     
     
 class BasicNetwork(nn.Module):
