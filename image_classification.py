@@ -13,13 +13,16 @@ import model_train
 #1: Model testing and analysis
 ########: 1.3: Test other methods of interpretation
 ########: 1.4: Output probability for given image
-
+#TODO:  Update data loader to new train/validate/test image locations
+#       Update data loader to also include other file data from CSV
+#       Update RESNET models to be include 1/2/3/4 channels of 8bit greyscale data
 
 training_batch_size = 15
 test_batch_size = 10
 classes = ("AR","ARS")
 num_epochs = 15
 
+image_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
 
 def train_model():
     train_loader = DataLoader(train_images, batch_size=training_batch_size, shuffle=True, num_workers=0)
@@ -40,8 +43,15 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 transform_norm = Compose([RandomRotation(180),Resize((224,224))])
 
 # Load training and testing datasets
-train_images = classification_class.ImagesDataset(annotations_file='images.csv', img_dir='samples/',transform=transform_norm)
-test_images = classification_class.ImagesDataset(annotations_file='test_images.csv', img_dir='test/',transform=transform_norm)
+training_images = classification_class.ImagesDataset(annotations_file='training.csv',
+                                                  img_dir = os.path.join(image_location, "training/"),
+                                                  transform = transform_norm)
+testing_images = classification_class.ImagesDataset(annotations_file='testing.csv',
+                                                 img_dir= os.path.join(image_location, "testing/"),
+                                                 transform = transform_norm)
+validation_images = classification_class.ImagesDataset(annotations_file='validation.csv',
+                                                 img_dir= os.path.join(image_location, "validation/"),
+                                                 transform = transform_norm)
 
 #model = classification_class.ResNet(classification_class.ResidualBlock, [3, 4, 6, 3])
 model = classification_class.ResNet50(2,3)
@@ -65,7 +75,7 @@ model.load_state_dict(torch.load(path))
 print('Loaded model')
 
 # Get accuracy of classes:
-test_loader=DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
+test_loader = DataLoader(test_images, batch_size = test_batch_size, shuffle=True, num_workers=0)
 model_test.test_class_accuracy(model, device, test_loader, classes)
 
 # Test batch of images

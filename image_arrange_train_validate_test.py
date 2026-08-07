@@ -3,10 +3,12 @@ import math
 import random
 import shutil
 
+#TODO: Include ability to switch between windows and linux file locations
+
 def separate(file_list, list_name, output_path):
     print("Copying", list_name,"files")
     output_folder = os.path.join(output_path, list_name)
-    output_csv = os.path.join(output_folder,list_name + ".csv")
+    output_csv = os.path.join(output_folder, list_name + ".csv")
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -27,7 +29,7 @@ def separate(file_list, list_name, output_path):
         shutil.copyfile(full_path, os.path.join(file_location, list_name, file_name))
         # save file list to csv
         with open(output_csv, "a") as output_file:
-            output_file.writelines(",".join([genotype,date,name,clone,input_location,image_id,"\n"]))
+            output_file.writelines(",".join([genotype,date,name,clone,input_location,image_id + "\n"]))
 
     
 def randomise_files(file_list, start_proportion, end_proportion):
