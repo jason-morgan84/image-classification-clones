@@ -9,19 +9,21 @@ import model_test
 
 
 
-def train(model, device, train_loader, test_loader, num_epochs,n_batches):
+def train(model, device, train_loader, test_loader, num_epochs, n_batches):
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.0005, momentum=0.9)
 
     optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
-
+    print("Training")
     for epoch in range(num_epochs):
+        print("Epoch")
         model.train()
         running_loss = 0.0
         start_time = time.time()
-        for data in train_loader:
+        for n, data in enumerate(train_loader):
+            print("Epoch", epoch, "of", num_epochs,". Batch", n,"of",n_batches)
             images = Variable(data['image'].to(device))
             labels = Variable(data['image_class'].to(device))
 
@@ -46,6 +48,7 @@ def train(model, device, train_loader, test_loader, num_epochs,n_batches):
 
             # predict classes using images from the training set
             outputs = model(transform_norm(images))
+
             # compute the loss based on model output and real labels
             loss = criterion(outputs, labels)
 

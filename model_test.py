@@ -20,10 +20,12 @@ def test_accuracy(model, device, test_loader):
     with torch.no_grad():
         for n, data in enumerate(test_loader):
             #print("Testing batch: ", n)
-            images, labels, _ = data
+            images = Variable(data['image'].to(device))
+            labels = Variable(data['image_class'].to(device))
+            #images, labels, _ = data
             # run the model on the test set to predict labels
-            outputs = model(images.to(device))
-            loss = criterion(outputs, labels.to(device))
+            outputs = model(images)
+            loss = criterion(outputs, labels)
             val_loss += loss.item() * labels.size(0)
             # the label with the highest energy will be our prediction
             _, predicted = torch.max(outputs.data, 1)

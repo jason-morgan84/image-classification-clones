@@ -1,29 +1,30 @@
 import torch
-from matplotlib.rcsetup import validate_int_or_None
-
+#from matplotlib.rcsetup import validate_int_or_None
+import torchvision
 import classification_class
 from torchvision.transforms import Compose,Normalize,RandomRotation,Resize
 from torch.utils.data import DataLoader
 import os
-from torchvision.io import read_image
+#from torchvision.io import read_image
 
 import model_interpret
 import model_test
 import model_train
+import math
 
 
 #1: Model testing and analysis
 ########: 1.3: Test other methods of interpretation
 ########: 1.4: Output probability for given image
-#TODO:  Update data loader to new train/validate/test image locations
-#       Update data loader to also include other file data from CSV
-#       Update RESNET models to be include 1/2/3/4 channels of 8bit greyscale data
+#TODO:  Check the correct image data is being used with regard to channels etc
+#   Look up testing methods loss etc, look at testing module, save data over epochs for quantification
 
 training_batch_size = 15
 validation_batch_size = 10
 test_batch_size = 5
 
 classes = ("AR", "ARS")
+n_channels = 2
 num_epochs = 15
 model_save_name = "model.pth"
 model_save_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/models"
@@ -31,27 +32,29 @@ model_save_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/models"
 image_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
 
 def train_model():
-    train_loader = DataLoader(dataset = training_images,
+    #TODO turn back to training images including for n_bathces
+    train_loader = DataLoader(dataset = testing_images,
                               batch_size = training_batch_size,
                               shuffle=True,
                               num_workers=0)
+    n_batches = math.floor(len(testing_images) / training_batch_size)
 
     validation_loader = DataLoader(dataset = validation_images,
                                    batch_size = validation_batch_size,
                                    shuffle=True,
                                    num_workers=0)
 
-    n_batches = len(training_images) / training_batch_size
 
+    print("Training model")
     model_train.train(model, device, train_loader, validation_loader, num_epochs, n_batches)
     print('Model Trained')
 
 def save_model(file_name):
     torch.save(model.state_dict(),file_name)
 
-
 # Define your execution device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(torch.cuda.is_available())
 #transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 #transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.045, 0.037, 0.5), (0.068, 0.053, 0.5))])
 transform_norm = Compose([RandomRotation(180),Resize((224,224))])
@@ -70,7 +73,7 @@ validation_images = classification_class.ImagesDataset(annotations_file='validat
                                                  transform = transform_norm)
 
 #model = classification_class.ResNet(classification_class.ResidualBlock, [3, 4, 6, 3])
-model = classification_class.ResNet50(2,3)
+model = classification_class.ResNet50(num_classes = 2, channels = n_channels)
 #model = classification_class.VGG16()
 #model = classification_class.BasicNetwork()
 print("Model setup")

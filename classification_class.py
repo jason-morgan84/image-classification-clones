@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import os
 import torch
 import tifffile as tiff
-from torchvision.io import read_image
+#from torchvision.io import read_image
 
 
 class ImagesDataset(Dataset):
@@ -34,7 +34,7 @@ class ImagesDataset(Dataset):
 
         img_path = os.path.join(self.img_dir, file_name + ".tif")
         #reads image - uses io.imread because its a tif, also transposes to proper order for conversion to tensor
-        image = torch.from_numpy(tiff.imread(img_path))
+        image = torch.from_numpy(tiff.imread(img_path)).float()
 
         if self.transform:
             image = self.transform(image)
@@ -302,6 +302,7 @@ class Block(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self, ResBlock, layer_list, num_classes, num_channels=3):
+        print("ResNet")
         super(ResNet, self).__init__()
         self.in_channels = 64
 
@@ -351,5 +352,6 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-def ResNet50(num_classes, channels=3):
+def ResNet50(num_classes, channels= 3):
+    print("ResNet50")
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes, channels)
