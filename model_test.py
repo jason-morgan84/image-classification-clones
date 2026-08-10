@@ -11,21 +11,23 @@ def test_item(model,device,image):
     return predicted
 
 # Function to test the model with the test dataset and print the accuracy for the test images
-def test_accuracy(model, device, test_loader):
+def test_accuracy(model,
+                  loss_function,
+                  device,
+                  loader):
     model.eval()
     accuracy = 0.0
     total = 0.0
-    criterion = nn.CrossEntropyLoss()
     val_loss = 0
     with torch.no_grad():
-        for n, data in enumerate(test_loader):
+        for n, data in enumerate(loader):
             #print("Testing batch: ", n)
             images = Variable(data['image'].to(device))
             labels = Variable(data['image_class'].to(device))
-            #images, labels, _ = data
+
             # run the model on the test set to predict labels
             outputs = model(images)
-            loss = criterion(outputs, labels)
+            loss = loss_function(outputs, labels)
             val_loss += loss.item() * labels.size(0)
             # the label with the highest energy will be our prediction
             _, predicted = torch.max(outputs.data, 1)
@@ -33,7 +35,7 @@ def test_accuracy(model, device, test_loader):
             accuracy += (predicted == labels.to(device)).sum().item()
 
     # compute the accuracy over all test images
-    val_loss /= len(test_loader.dataset)
+    val_loss /= len(loader.dataset)
     accuracy = (100 * accuracy / total)
     return accuracy, val_loss
 

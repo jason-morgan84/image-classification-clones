@@ -1,29 +1,41 @@
 import time
-from torch.optim import Adam
+
 from torch.autograd import Variable
 import torch
-import torch.nn as nn
+
 from torchvision.transforms import Compose,Normalize,RandomRotation,Resize
 
 import model_test
 
 
 
-def train(model, device, train_loader, test_loader, num_epochs, n_batches):
+def train(model,
+          loss_function,
+          optimizer,
+          device,
+          train_loader,
+          validation_loader,
+          num_epochs,
+          batch_size_train,
+          batch_size_validation):
     model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.0005, momentum=0.9)
+    n_batches_train = len(train_loader)
+    n_batches_validation = len(validation_loader)
 
-    optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
-    print("Training")
+    training_loss_history = []
+    validation_loss_history = []
+
+    training_accuracy_history = []
+    validation_accuracy_history = []
+
+
     for epoch in range(num_epochs):
-        print("Epoch")
         model.train()
         running_loss = 0.0
         start_time = time.time()
         for n, data in enumerate(train_loader):
-            print("Epoch", epoch, "of", num_epochs,". Batch", n,"of",n_batches)
+            print("\r","Epoch", epoch + 1, "of", num_epochs,". Batch", n,"of", n_batches_train, end = "")
             images = Variable(data['image'].to(device))
             labels = Variable(data['image_class'].to(device))
 
@@ -50,24 +62,47 @@ def train(model, device, train_loader, test_loader, num_epochs, n_batches):
             outputs = model(transform_norm(images))
 
             # compute the loss based on model output and real labels
-            loss = criterion(outputs, labels)
+            loss = loss_function(outputs, labels)
 
             # backpropagate the loss
             loss.backward()
+
+            #TODO: is there a way to speed things up by integrating training accuracy calculation into training?
+
             # adjust parameters based on the calculated gradients
             optimizer.step()
 
-            running_loss += loss.item() * images.size(0)
+            running_loss += loss.item() * batch_size_train
 
-        # Compute and print the average accuracy fo this epoch when tested over all 10000 test images
-        accuracy, val_loss = model_test.test_accuracy(model, device, test_loader)
+        # Compute and print the average accuracy for this epoch when tested over all test images
+        validation_accuracy, val_loss = model_test.test_accuracy(model = model,
+                                                                 device = device,
+                                                                 loss_function = loss_function,
+                                                                 loader = validation_loader)
+        training_accuracy, train_loss = model_test.test_accuracy(model = model,
+                                                                 loss_function = loss_function,
+                                                                 device = device,
+                                                                 loader = train_loader)
 
-        print('Epoch {}: Training loss - {}, validation loss - {}, accuracy - {}, time taken - {} seconds' .format(epoch+1,round(running_loss/len(train_loader),3),round(val_loss,3),round(accuracy,0),round(time.time()-start_time),0))
-
+        print('\r','Epoch {}: Training loss - {}, training accuracy - {}, validation loss - {}, validation accuracy - {}, time taken - {} seconds' .format(epoch + 1,
+                                                                                                                   round(train_loss, 3),
+                                                                                                                   round(training_accuracy, 3),
+                                                                                                                   round(val_loss, 3),
+                                                                                                                   round(validation_accuracy, 0),
+                                                                                                                   round(time.time() - start_time), 0), end = '\n')
+        training_loss_history.append(round(train_loss,3))
+        training_accuracy_history.append(round(training_accuracy,3))
+        validation_loss_history.append(round(val_loss,3))
+        validation_accuracy_history.append(round(validation_accuracy,3))
         # we want to save the model if the accuracy is the best
         #if accuracy > best_accuracy:
             #torch.save(model.state_dict(), "./ResNet10 50.pth")
             #best_accuracy = accuracy
+    training_statitics = {"training_loss": training_loss_history,
+                          "training_accuracy": training_accuracy_history,
+                          "validation_loss": validation_loss_history,
+                          "validation_accuracy": validation_accuracy_history}
 
+    return model, training_statitics
 
 
