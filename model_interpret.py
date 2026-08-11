@@ -11,19 +11,21 @@ from captum.attr import visualization as viz
 import classification_class
 
 
-def model_occlusion(model,test_image,label):
+def model_occlusion(model,test_image,label, n_channels):
     model.eval()
-
     occlusion = Occlusion(model)
-    #TODO:  Replace 2 in strides and sliding window shapes with n_classes
-    #       Pass n_classes to model_occlusion
-    strides = (2, 9, 9)  # smaller = more fine-grained attribution but slower
+    strides = (n_channels, 9, 9)  # smaller = more fine-grained attribution but slower
     target = label,  # AR index
-    sliding_window_shapes = (2, 15, 15)  # choose size enough to change object appearance
+    sliding_window_shapes = (n_channels, 15, 15)  # choose size enough to change object appearance
     baselines = 0  # values to occlude the image with 0 corresponds to gray
 
     image_output = test_image.squeeze().cpu().detach().numpy()
-    image_output = image_output * 0.05 + 0.04
+    _, height, width = image_output.shape
+    #image_output = image_output * 0.05 + 0.04
+    image_output = np.transpose(np.append(image_output, np.zeros((1,height,width)), axis=0),(1,2,0)).astype(np.uint8)
+    #image_output = np.transpose(image_output,2,0,1)
+
+
 
 
     attribution = occlusion.attribute(test_image,
@@ -37,11 +39,13 @@ def model_occlusion(model,test_image,label):
 
     # Convert the compute attribution tensor into an image-like numpy array
     attribution_output = attribution.squeeze().cpu().detach().numpy()
+    attribution_output = np.transpose(np.append(attribution_output, np.zeros((1,height,width)), axis=0),(1,2,0))
 
     # positive attribution indicates that the presence of the area increases the prediction score
     # negative attribution indicates distractor areas whose absence increases the score
-    #TODO - convert image to correct format for visualisation
-    viz.visualize_image_attr_multiple(attribution_output, original_image=image_output,
+
+    viz.visualize_image_attr_multiple(attribution_output,
+                                      original_image = image_output,
                                       signs=["all", "positive", "negative"],
                                       methods=["original_image", "blended_heat_map", "blended_heat_map"])
 
@@ -128,8 +132,9 @@ test_class_accuracy(model, device, test_loader, classes)
 batch = next(iter(test_loader))
 prediction = test_item(model, device, batch["image"])
 
-print('Real labels: ', ' '.join('%5s' % classes[batch["image_class"][j]] for j in range(test_batch_size)))
-print('Predicted: ', ' '.join('%5s' % classes[prediction[j]] for j in range(test_batch_size)))
+
+for j in range(test_batch_size):
+    print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][j],batch["genotype"][j],classes[prediction[j]]))
 
 # output images
 print("Interpretation")
@@ -137,7 +142,9 @@ test_loader = DataLoader(dataset = testing_images,
                          batch_size = 1,
                          shuffle = True,
                          num_workers = 0)
+
 batch = next(iter(test_loader))
 prediction = test_item(model, device, batch["image"])
-print("Real label:", batch["genotype"][0],"Prediction: ",classes[prediction.item()])
-model_occlusion(model, batch["image"].to(device), batch["image_class"].to(device).item())
+print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][0],batch["genotype"][0],classes[prediction.item()]))
+
+model_occlusion(model, batch["image"].to(device), batch["image_class"].to(device).item(), n_channels)

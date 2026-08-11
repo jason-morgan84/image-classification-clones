@@ -40,7 +40,7 @@ class ImagesDataset(Dataset):
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(image_class)
-        return {'image': image, 'genotype': genotype, 'image_class': image_class, 'date': date, 'clone_id': clone_id, 'original_image_file': original_image_file}
+        return {'image': image, 'genotype': genotype, 'image_class': image_class, 'date': date, 'clone_id': clone_id, 'original_image_file': original_image_file,'file_name': file_name}
         #return image, image_class
     
     
