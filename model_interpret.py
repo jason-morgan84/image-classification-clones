@@ -1,6 +1,8 @@
 from captum.attr import Occlusion
 import numpy as np
 import os
+import zipfile
+import io
 
 import torch
 from torchvision.transforms import Compose, RandomRotation, Resize
@@ -92,7 +94,7 @@ def test_item(model,device,image):
 #   n_channels
 #   classes
 
-# input definitions
+# testing definitions
 classes = ("AR", "ARS")
 n_channels = 2
 image_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
@@ -100,7 +102,18 @@ test_batch_size = 5
 
 # model definitions
 model_save_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models"
-model_save_name = "model20260810163405.pth"
+model_save_name = "modelD20260811T150424.pth"
+model_full_path = os.path.join(model_save_location, model_save_name)
+
+# get settings used to train model from saved model
+with zipfile.ZipFile(model_full_path,"r") as myzip:
+    input_text = io.TextIOWrapper(myzip.open(os.path.join("settings","settings.txt"),"r"), encoding='utf_8_sig')
+
+inputs = [line.rstrip().split("+") for line in input_text]
+print(inputs)
+settings = dict(inputs)
+
+print(settings)
 
 # setup device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

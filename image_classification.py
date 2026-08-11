@@ -130,15 +130,21 @@ plt.show()
 model_save_name += datetime.datetime.now().strftime("D%Y%m%dT%H%M%S")
 model_full_path = os.path.join(model_save_location, model_save_name+".pth")
 
-torch.save(model.state_dict(),model_full_path)
+torch.save(model.state_dict(), "model.pt")
+with zipfile.ZipFile(model_full_path,"w") as myzip:
+    myzip.write("model.pt")
+os.remove("model.pt")
+
+
 print("Model saved")
 
 
 # add optimizer and loss_function to training settings dictionary and output to model zip
 training.update([("loss_function", loss_function["name"]),("optimizer",optimizer["name"])])
 output = ""
+
 for key, value in training.items():
-    output += str(key) + "," + str(value) + "\n"
+    output += str(key) + "+" + str(value) + "\n"
 with zipfile.ZipFile(model_full_path,"a") as myzip:
     myzip.writestr("settings.txt",output)
 
