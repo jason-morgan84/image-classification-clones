@@ -14,16 +14,12 @@ import classification_class
 import model_train
 
 #1: Model testing and analysis
-########: 1.3: Test other methods of interpretation
 ########: 1.4: Output probability for given image
 #TODO:  Check the correct image data is being used with regard to channels etc
-#   Rearrange modules
-#       eg: doesn't really make sense for models and classification class to be in the same module
-#       does train_model in this module needs its own function
-#   Check transformations
-#       why is batch transform in model train not in the main function?
 #   What can I change to improve model? Look up optimisation of CNN learning
 #       Optimiser
+#       Transformations
+#           Why are transformations split up?
 #       Normalisation
 #       Epochs
 #       Images
@@ -34,20 +30,19 @@ import model_train
 
 classes = ("AR", "ARS")
 n_channels = 2
-image_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
+image_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
 
 # training definitions
 
 training_batch_size = 15
 validation_batch_size = 10
-test_batch_size = 5
 num_epochs = 30
 lr = 0.001
 weight_decay = 0.0001
 
 # output definitions
 model_save_name = "model"
-model_save_location = "/media/jason/74C88A6CC88A2D04/Lab/Classification/models"
+model_save_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models"
 
 
 
@@ -56,12 +51,7 @@ def save_model(file_name):
 
 # Define execution device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-    print("Device is ROCm")
-else:
-    device = "cpu"
-    print("Device is CPU")
+print(device)
 
 
 # Define image transformations
@@ -73,10 +63,6 @@ transform_norm = Compose([RandomRotation(180),Resize((224,224))])
 training_images = classification_class.ImagesDataset(annotations_file='training.csv',
                                                   img_dir = os.path.join(image_location, "training/"),
                                                   transform = transform_norm)
-
-testing_images = classification_class.ImagesDataset(annotations_file='testing.csv',
-                                                 img_dir= os.path.join(image_location, "testing/"),
-                                                 transform = transform_norm)
 
 validation_images = classification_class.ImagesDataset(annotations_file='validation.csv',
                                                  img_dir= os.path.join(image_location, "validation/"),
@@ -92,14 +78,14 @@ validation_loader = DataLoader(dataset = validation_images,
                                shuffle = True,
                                num_workers = 0)
 
-test_loader = DataLoader(dataset = testing_images,
-                         batch_size = test_batch_size,
-                         shuffle = True,
-                         num_workers = 0)
+
 
 
 # Set up model
 model = classification_class.ResNet50(num_classes = 2, channels = n_channels)
+#model = classification_class.ResNet(classification_class.ResidualBlock, [3, 4, 6, 3])
+#model = classification_class.VGG16()
+#model = classification_class.BasicNetwork()
 
 loss_function = {"name": "CrossEntropyLoss",
                  "function": nn.CrossEntropyLoss()}
@@ -108,10 +94,6 @@ optimizer = {"name": "Adam",
              "function": Adam(model.parameters(), lr = lr, weight_decay = weight_decay)}
 # optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.0005, momentum=0.9)
 
-
-#model = classification_class.ResNet(classification_class.ResidualBlock, [3, 4, 6, 3])
-#model = classification_class.VGG16()
-#model = classification_class.BasicNetwork()
 print("Model setup")
 
 
@@ -153,7 +135,7 @@ with open(os.path.join(model_save_location,"history.csv"), "a") as output_file:
                                str(optimizer["name"]),
                                str(lr),
                                str(weight_decay),
-                               str(image_location)]))
+                               image_location]))
 
 
 
@@ -168,22 +150,6 @@ with open(os.path.join(model_save_location,"history.csv"), "a") as output_file:
 
 
 
-# Let's load the model we just created and test the accuracy per label
-#path = "Model.pth"
-#model.load_state_dict(torch.load(path))
-#print('Loaded model')
-
-# Get accuracy of classes:
-
-#model_test.test_class_accuracy(model, device, test_loader, classes)
-
-# Test batch of images
-"""test_loader=DataLoader(test_images, batch_size=test_batch_size, shuffle=True, num_workers=0)
-images, labels, file_names = next(iter(test_loader))
-prediction = model_test.test_item(model, device, images)
-print('Real labels: ', ' '.join('%5s' % classes[labels[j]] for j in range(test_batch_size)))
-print('Predicted: ', ' '.join('%5s' % classes[prediction[j]] for j in range(test_batch_size)))
-"""
 
 # Model interpretation
 """test_loader=DataLoader(test_images, batch_size=1, shuffle=True, num_workers=0)

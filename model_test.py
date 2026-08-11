@@ -1,74 +1,14 @@
 import torch
 from sympy import true
 from torch.autograd import Variable
-import torch.nn as nn
 
-def test_item(model,device,image):
-    model.eval()
-    model.to(device)
-    output = model(image.to(device))
-    _,predicted = torch.max(output.data, 1)
-    return predicted
+
 
 # Function to test the model with the test dataset and print the accuracy for the test images
-def test_accuracy(model,
-                  loss_function,
-                  device,
-                  loader):
-    model.eval()
-    accuracy = 0.0
-    total = 0.0
-    val_loss = 0
-    with torch.no_grad():
-        for n, data in enumerate(loader):
-            #print("Testing batch: ", n)
-            images = Variable(data['image'].to(device))
-            labels = Variable(data['image_class'].to(device))
-
-            # run the model on the test set to predict labels
-            outputs = model(images)
-            loss = loss_function(outputs, labels)
-            val_loss += loss.item() * labels.size(0)
-            # the label with the highest energy will be our prediction
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            accuracy += (predicted == labels.to(device)).sum().item()
-
-    # compute the accuracy over all test images
-    val_loss /= len(loader.dataset)
-    accuracy = (100 * accuracy / total)
-    return accuracy, val_loss
 
 
-def test_class_accuracy(model, device, test_loader, groups):
 
-    model.to(device)
-    model.eval()
-    n_groups = len(groups)
-    group_total = [0] * n_groups
-    group_accuracy = []
-    total = [0] * n_groups
 
-    with torch.no_grad():
-        for data in test_loader:
-            images, labels, _ = data
-            images = Variable(images.to(device))
-            labels = Variable(labels.to(device))
-            # run the model on the test set to predict labels
-            outputs = model(images.to(device))
-            # the label with the highest energy will be our prediction
-            _, predicted = torch.max(outputs.data, 1)
-            test = (predicted==labels.squeeze())
-            for n, item in enumerate(labels):
-                item_group = item.item()
-                total[item_group] += 1
-                if test[n].item()==true:
-                    group_total[item_group] += 1
-
-        for n,group in enumerate(groups):
-            group_accuracy.append((group_total[n]/total[n])*100)
-            print(group+" ("+str(n)+") accuracy: "+str(round(group_accuracy[n],2))+"%")
-    return group_accuracy
 
  # Function to test the model with a batch of images and show the labels predictions
 

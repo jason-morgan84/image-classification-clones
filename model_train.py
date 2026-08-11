@@ -5,9 +5,37 @@ import torch
 
 from torchvision.transforms import Compose,Normalize,RandomRotation,Resize
 
-import model_test
 
 
+
+def test_accuracy(model,
+                  loss_function,
+                  device,
+                  loader):
+    model.eval()
+    accuracy = 0.0
+    total = 0.0
+    val_loss = 0
+    with torch.no_grad():
+        for data in loader:
+            #print("Testing batch: ", n)
+            images = Variable(data['image'].to(device))
+            labels = Variable(data['image_class'].to(device))
+
+            # run the model on the test set to predict labels
+            outputs = model(images)
+            loss = loss_function(outputs, labels)
+            val_loss += loss.item() * labels.size(0)
+
+            # the label with the highest energy will be our prediction
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            accuracy += (predicted == labels.to(device)).sum().item()
+
+    # compute the accuracy over all test images
+    val_loss /= len(loader.dataset)
+    accuracy = (100 * accuracy / total)
+    return accuracy, val_loss
 
 def train(model,
           loss_function,
@@ -75,11 +103,11 @@ def train(model,
             running_loss += loss.item() * batch_size_train
 
         # Compute and print the average accuracy for this epoch when tested over all test images
-        validation_accuracy, val_loss = model_test.test_accuracy(model = model,
+        validation_accuracy, val_loss = test_accuracy(model = model,
                                                                  device = device,
                                                                  loss_function = loss_function,
                                                                  loader = validation_loader)
-        training_accuracy, train_loss = model_test.test_accuracy(model = model,
+        training_accuracy, train_loss = test_accuracy(model = model,
                                                                  loss_function = loss_function,
                                                                  device = device,
                                                                  loader = train_loader)
