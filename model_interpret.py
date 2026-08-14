@@ -94,7 +94,7 @@ def test_item(model,device,image):
 test_batch_size = 5
 
 # model definitions
-model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T141857"
+model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T150150"
 
 # get settings used to train model from saved model
 settings = dict()
@@ -102,7 +102,6 @@ with open(os.path.join(model_location, "settings.txt"), "r") as file:
 
     for line in file.readlines():
         key, value = line.rstrip().split("\t")
-        print(key, value)
         #TODO: look into replacing eval with JSON https://docs.python.org/2/library/json.html
         settings[key] = eval(value)
 

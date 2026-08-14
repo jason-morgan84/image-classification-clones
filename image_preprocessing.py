@@ -121,9 +121,9 @@ def resize (image, size, channels):
     return output_images
 
 # file location variables
-path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list.csv"
-path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260814"
-path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260814"
+path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list_test.csv"
+path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260814 no pad"
+path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260814 no pad"
 
 # output options
 channels = (1, 3)
@@ -193,10 +193,10 @@ for file_number, file in enumerate(input_file_list):
     cropped_segments = crop_segments(isolated_segments, label_properties)
 
     # pads cropped segments so isolated region is central
-    padded_segments = pad_cropped_segments(cropped_segments, height, width, label_properties)
+    #padded_segments = pad_cropped_segments(cropped_segments, height, width, label_properties)
 
     # resizes image to desired dimensions
-    output_image = resize(padded_segments, output_size, n_channels) 
+    output_image = resize(cropped_segments, output_size, n_channels)
 
     mean = []
     std = []

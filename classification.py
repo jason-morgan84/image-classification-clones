@@ -24,12 +24,12 @@ import model_train
 # training settings
 
 training = {
-    "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260814/",
+    "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260814 no pad/",
     "classes": ("AR", "ARS"),
     "n_channels": 2,
     "training_batch_size": 15,
     "validation_batch_size" : 10,
-    "num_epochs": 50,
+    "num_epochs": 30,
     "lr": 0.001,
     "weight_decay": 0.0001,
     "transformations": [],
