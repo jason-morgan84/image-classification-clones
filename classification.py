@@ -29,7 +29,7 @@ training = {
     "n_channels": 2,
     "training_batch_size": 15,
     "validation_batch_size" : 10,
-    "num_epochs": 1,
+    "num_epochs": 50,
     "lr": 0.001,
     "weight_decay": 0.0001,
     "transformations": [],
@@ -68,10 +68,8 @@ def save_model(file_name):
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Running on device:",device)
 
-
 # Define image transformations
 training["transformations"] = [CenterCrop((224,224)), Normalize(training_mean,training_std)]
-print(str(training["transformations"]),type(training["transformations"]),type(training["transformations"][0]))
 
 # Load training and testing datasets
 training_images = classification_class.ImagesDataset(annotations_file='training.csv',
