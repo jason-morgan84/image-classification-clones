@@ -122,10 +122,7 @@ def train(model,
         training_accuracy_history.append(round(training_accuracy,3))
         validation_loss_history.append(round(val_loss,3))
         validation_accuracy_history.append(round(validation_accuracy,3))
-        # we want to save the model if the accuracy is the best
-        #if accuracy > best_accuracy:
-            #torch.save(model.state_dict(), "./ResNet10 50.pth")
-            #best_accuracy = accuracy
+
     training_statitics = {"training_loss": training_loss_history,
                           "training_accuracy": training_accuracy_history,
                           "validation_loss": validation_loss_history,

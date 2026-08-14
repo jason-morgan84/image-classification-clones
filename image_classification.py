@@ -33,8 +33,6 @@ training = {
     "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/",
     "classes": ("AR", "ARS"),
     "n_channels": 2,
-    "training_loss": [],
-    "validation_loss": [],
     "training_batch_size": 15,
     "validation_batch_size" : 10,
     "num_epochs": 1,
@@ -53,7 +51,7 @@ def save_model(file_name):
 
 # Define execution device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
+print("Running on device:",device)
 
 
 # Define image transformations
@@ -125,30 +123,40 @@ ax1.legend()
 ax2.legend()
 plt.show()
 
-# Save model and output key data to history file
-
+# Save model, model code, key settings and training results
 model_save_name += datetime.datetime.now().strftime("D%Y%m%dT%H%M%S")
-model_full_path = os.path.join(model_save_location, model_save_name+".pth")
+model_full_path = os.path.join(model_save_location, model_save_name)
+os.mkdir(model_full_path)
 
-torch.save(model.state_dict(), "model.pt")
-with zipfile.ZipFile(model_full_path,"w") as myzip:
-    myzip.write("model.pt")
-os.remove("model.pt")
+# save model
+torch.save(model.state_dict(), os.path.join(model_full_path,"model.pt"))
 
-
-print("Model saved")
-
-
-# add optimizer and loss_function to training settings dictionary and output to model zip
+# add optimizer and loss_function to training settings dictionary and save settings to file
 training.update([("loss_function", loss_function["name"]),("optimizer",optimizer["name"])])
-output = ""
+output_settings = ""
 
 for key, value in training.items():
-    output += str(key) + "+" + str(value) + "\n"
-with zipfile.ZipFile(model_full_path,"a") as myzip:
-    myzip.writestr("settings.txt",output)
+    if type(value) == str:
+        output_settings += str(key) + "\t" + "'" + str(value) + "'" + "\n"
+    else:
+        output_settings += str(key) + "\t" + str(value) + "\n"
 
+with open(os.path.join(model_full_path,"settings.txt"), 'w') as file:
+    file.write(output_settings)
 
+# output training results
+output_results = "epoch,training_loss,training_accuracy,validation_loss,validation_accuracy\n"
+for n in range(training["num_epochs"]):
+    output_results += ",".join([str(n),
+                               str(training_statistics["training_loss"][n]),
+                               str(training_statistics["training_accuracy"][n]),
+                               str(training_statistics["validation_loss"][n]),
+                               str(training_statistics["validation_accuracy"][n])]) + '\n'
+
+with open(os.path.join(model_full_path,"results.txt"),'w') as file:
+    file.write(output_results)
+
+print("Model saved")
 
 
 

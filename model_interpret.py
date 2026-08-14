@@ -1,3 +1,5 @@
+import ast
+
 from captum.attr import Occlusion
 import numpy as np
 import os
@@ -90,38 +92,26 @@ def test_item(model,device,image):
     _,predicted = torch.max(output.data, 1)
     return predicted
 
-# TODO: Make sure history includes all details needed for interpretation, load history alongside model
-#   n_channels
-#   classes
-
 # testing definitions
-classes = ("AR", "ARS")
-n_channels = 2
-image_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/"
 test_batch_size = 5
 
 # model definitions
-model_save_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models"
-model_save_name = "modelD20260811T150424.pth"
-model_full_path = os.path.join(model_save_location, model_save_name)
+model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T090729"
 
 # get settings used to train model from saved model
-with zipfile.ZipFile(model_full_path,"r") as myzip:
-    input_text = io.TextIOWrapper(myzip.open(os.path.join("settings","settings.txt"),"r"), encoding='utf_8_sig')
-
-inputs = [line.rstrip().split("+") for line in input_text]
-print(inputs)
-settings = dict(inputs)
-
-print(settings)
+settings = dict()
+with open(os.path.join(model_location, "settings.txt"), "r") as file:
+    for line in file.readlines():
+        key, value = line.rstrip().split("\t")
+        settings[key] = ast.literal_eval(value)
 
 # setup device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
+print("Running on device:", device)
 
 # load model
-model = classification_class.ResNet50(num_classes = 2, channels = n_channels)
-model.load_state_dict(torch.load(os.path.join(model_save_location, model_save_name)))
+model = classification_class.ResNet50(num_classes = len(settings['classes']), channels = settings['n_channels'])
+model.load_state_dict(torch.load(os.path.join(model_location, "model.pt")))
 
 model.to(device)
 print('Loaded model')
@@ -129,8 +119,8 @@ print('Loaded model')
 # set up testing images and dataloader
 transform_norm = Compose([RandomRotation(180),Resize((224,224))])
 
-testing_images = classification_class.ImagesDataset(annotations_file='testing.csv',
-                                                 img_dir= os.path.join(image_location, "testing/"),
+testing_images = classification_class.ImagesDataset(annotations_file = 'testing.csv',
+                                                 img_dir = os.path.join(settings['image_location'], "testing/"),
                                                  transform = transform_norm)
 
 test_loader = DataLoader(dataset = testing_images,
@@ -139,17 +129,16 @@ test_loader = DataLoader(dataset = testing_images,
                          num_workers = 0)
 
 # Get accuracy of classes:
-test_class_accuracy(model, device, test_loader, classes)
+test_class_accuracy(model, device, test_loader, settings['classes'])
 
 # Test batch of images
 batch = next(iter(test_loader))
 prediction = test_item(model, device, batch["image"])
 
-
 for j in range(test_batch_size):
-    print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][j],batch["genotype"][j],classes[prediction[j]]))
+    print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][j],batch["genotype"][j],settings['classes'][prediction[j]]))
 
-# output images
+# dispaly interpreted image
 print("Interpretation")
 test_loader = DataLoader(dataset = testing_images,
                          batch_size = 1,
@@ -158,6 +147,6 @@ test_loader = DataLoader(dataset = testing_images,
 
 batch = next(iter(test_loader))
 prediction = test_item(model, device, batch["image"])
-print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][0],batch["genotype"][0],classes[prediction.item()]))
+print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][0],batch["genotype"][0],settings['classes'][prediction.item()]))
 
-model_occlusion(model, batch["image"].to(device), batch["image_class"].to(device).item(), n_channels)
+model_occlusion(model, batch["image"].to(device), batch["image_class"].to(device).item(), settings['n_channels'])
