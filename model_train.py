@@ -67,35 +67,17 @@ def train(model,
             images = Variable(data['image'].to(device))
             labels = Variable(data['image_class'].to(device))
 
-            #normalize by batch
-            sum_mean = 0
-            sum_sd = 0
-            for image in images:
-                mean_sd = torch.std_mean(image)
-                sum_mean += mean_sd[0].item()
-                sum_sd += mean_sd[1].item()
-            mean = sum_mean/len(images)
-            sd = sum_sd/len(images)
-            transform_norm = Compose([Normalize(mean, sd)])
-
-            # get normalized image
-            #for image in images:
-               # image = transform_norm(image)
-
-
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # predict classes using images from the training set
-            outputs = model(transform_norm(images))
-
+            outputs = model(images)
             # compute the loss based on model output and real labels
+
             loss = loss_function(outputs, labels)
 
             # backpropagate the loss
             loss.backward()
-
-            #TODO: is there a way to speed things up by integrating training accuracy calculation into training?
 
             # adjust parameters based on the calculated gradients
             optimizer.step()

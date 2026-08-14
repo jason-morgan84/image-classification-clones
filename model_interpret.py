@@ -3,8 +3,6 @@ import ast
 from captum.attr import Occlusion
 import numpy as np
 import os
-import zipfile
-import io
 
 import torch
 from torchvision.transforms import Compose, RandomRotation, Resize
@@ -117,11 +115,11 @@ model.to(device)
 print('Loaded model')
 
 # set up testing images and dataloader
-transform_norm = Compose([RandomRotation(180),Resize((224,224))])
+#transform_norm = Compose([RandomRotation(180),Resize((224,224))])
 
 testing_images = classification_class.ImagesDataset(annotations_file = 'testing.csv',
                                                  img_dir = os.path.join(settings['image_location'], "testing/"),
-                                                 transform = transform_norm)
+                                                 transform = settings["transform_norm"])
 
 test_loader = DataLoader(dataset = testing_images,
                          batch_size = test_batch_size,

@@ -1,15 +1,13 @@
 import datetime
 import os
-import zipfile
-# from torchvision.io import read_image
+
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, RandomRotation, Resize
+from torchvision.transforms import Compose, CenterCrop, Normalize
 
-# from matplotlib.rcsetup import validate_int_or_None
 import classification_class
 import model_train
 
@@ -37,14 +35,34 @@ training = {
     "validation_batch_size" : 10,
     "num_epochs": 1,
     "lr": 0.001,
-    "weight_decay": 0.0001
+    "weight_decay": 0.0001,
+    "transform_norm": Compose([])
 }
 
-# output definitions
+# model save location
 model_save_name = "model"
 model_save_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models"
 
 
+# gets mean and std of training images for later normalization
+sum_mean = [0.0 for i in range(training["n_channels"])]
+sum_std = [0.0 for j in range(training["n_channels"])]
+total = [0 for k in range(training["n_channels"])]
+
+with open(os.path.join(training["image_location"], "training/"),"r") as file:
+    file.readline()
+    for line in file.readlines():
+        _,_,_,_,_,image_mean,image_std,_ = line.rstrip().split(",")
+        for n, channel_mean in enumerate(image_mean.split(" ")):
+            sum_mean[n] += float(channel_mean)
+
+        for n, channel_std in enumerate(image_std.split(" ")):
+            sum_std[n] += float(channel_std)
+
+        total += 1
+
+training_mean = [(sum_mean[i] / total) /255 for i in range(len(sum_mean))]
+training_std = [(sum_std[i] / total) /255 for i in range(len(sum_std))]
 
 def save_model(file_name):
     torch.save(model.state_dict(),file_name)
@@ -55,18 +73,19 @@ print("Running on device:",device)
 
 
 # Define image transformations
-#transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-#transform_norm = Compose([RandomRotation(180),Resize((224,224)),Normalize((0.045, 0.037, 0.5), (0.068, 0.053, 0.5))])
-transform_norm = Compose([RandomRotation(180),Resize((224,224))])
+
+training["transform_norm"] = Compose([CenterCrop((224,224)), Normalize(training_mean,training_std)])
 
 # Load training and testing datasets
 training_images = classification_class.ImagesDataset(annotations_file='training.csv',
                                                   img_dir = os.path.join(training["image_location"], "training/"),
-                                                  transform = transform_norm)
+                                                  transform = training["transform_norm"])
+for image in training_images:
+    print(image['image'].max())
 
 validation_images = classification_class.ImagesDataset(annotations_file='validation.csv',
                                                  img_dir= os.path.join(training["image_location"], "validation/"),
-                                                 transform = transform_norm)
+                                                 transform = training["transform_norm"])
 
 #TODO update back to training_images
 train_loader = DataLoader(dataset = validation_images,

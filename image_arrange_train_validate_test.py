@@ -14,8 +14,7 @@ def separate(file_list, list_name, output_path):
         os.makedirs(output_folder)
 
     with open(output_csv, "w") as output_file:
-        output_file.writelines("genotype,date,name,clone,input_location,image_id\n")
-
+        output_file.writelines("genotype,date,name,clone,image_mean,image_std,input_location,image_id\n")
     # check output folder exists
 
 
@@ -23,13 +22,13 @@ def separate(file_list, list_name, output_path):
     
     for n, file in enumerate(file_list):
         print(n,"/",len(file_list),end='\r')
-        genotype, date, name, input_location, clone, full_path = tuple(file.rstrip().split(","))
+        genotype, date, name, input_location, clone, image_mean, image_std, full_path = tuple(file.rstrip().split(","))
         file_location, file_name = os.path.split(full_path)
         image_id, _ = os.path.splitext(file_name)
         shutil.copyfile(full_path, os.path.join(file_location, list_name, file_name))
         # save file list to csv
         with open(output_csv, "a") as output_file:
-            output_file.writelines(",".join([genotype,date,name,clone,input_location,image_id + "\n"]))
+            output_file.writelines(",".join([genotype, date, name, clone, image_mean, image_std, input_location, image_id + "\n"]))
 
     
 def randomise_files(file_list, start_proportion, end_proportion):

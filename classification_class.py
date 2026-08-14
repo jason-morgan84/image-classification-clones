@@ -33,8 +33,8 @@ class ImagesDataset(Dataset):
         original_image_file = self.img_labels.iloc[idx, 4]
 
         img_path = os.path.join(self.img_dir, file_name + ".tif")
-        #reads image - uses io.imread because its a tif, also transposes to proper order for conversion to tensor
-        image = torch.from_numpy(tiff.imread(img_path)).float()
+        #reads image and converts to 0-1 float type
+        image = torch.from_numpy(tiff.imread(img_path)/255)
 
         if self.transform:
             image = self.transform(image)

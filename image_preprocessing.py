@@ -153,7 +153,7 @@ if not os.path.exists(path_output_images):
 # iterate through all files in folder
 
 with open(os.path.join(path_output_csv,"output.csv"), "w") as output_file:
-    output_file.writelines("genotype,date,name,input_location,clone,output_location\n")
+    output_file.writelines("genotype,date,name,input_location,clone,image_mean,image_std,output_location\n")
 
 for file_number, file in enumerate(input_file_list):
     print(file.location, "(",file_number,"of",len(input_file_list),")")
@@ -198,13 +198,23 @@ for file_number, file in enumerate(input_file_list):
     # resizes image to desired dimensions
     output_image = resize(padded_segments, output_size, n_channels) 
 
-    #output images to multi dimensional tifs
+    image_mean = [np.mean(output_image[channel] for channel in output_image)]
+    image_std = [np.std(output_image[channel]) for channel in output_image]
+
+    #output images as multi dimensional tifs
     with open(os.path.join(path_output_csv,"output.csv"), "a") as output_file:
         for n, image in enumerate(output_image):
             output_file_name = str(file_number) + "c" + str(n) + ".tif"
             print(output_file_name)
             ti.imwrite(os.path.join(path_output_images, output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
-            output_file.writelines(",".join([file.genotype, file.date, file.name, file.location, str(n), os.path.abspath(os.path.join(path_output_images,output_file_name))+"\n"]))
+            output_file.writelines(",".join([file.genotype,
+                                             file.date,
+                                             file.name,
+                                             file.location,
+                                             str(n),
+                                             " ".join([str(i) for i in image_mean]),
+                                             " ".join([str(i) for i in image_std]),
+                                             os.path.abspath(os.path.join(path_output_images,output_file_name)) + "\n"]))
     
 #genotype, date, name, input_location, clone, output_location
 
