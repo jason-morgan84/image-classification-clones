@@ -16,10 +16,6 @@ import model_train
 #TODO:  Check the correct image data is being used with regard to channels etc
 #   What can I change to improve model? Look up optimisation of CNN learning
 #       Optimiser
-#       Transformations
-#           Why are transformations split up?
-#       Normalisation
-#           Currently no normalisation
 #       Epochs
 #       Images
 #       Loss function
@@ -28,7 +24,7 @@ import model_train
 # training settings
 
 training = {
-    "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260805/",
+    "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260814/",
     "classes": ("AR", "ARS"),
     "n_channels": 2,
     "training_batch_size": 15,
@@ -36,7 +32,8 @@ training = {
     "num_epochs": 1,
     "lr": 0.001,
     "weight_decay": 0.0001,
-    "transform_norm": Compose([])
+    "transformations": [],
+    "model": "resnet50"
 }
 
 # model save location
@@ -47,12 +44,12 @@ model_save_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models"
 # gets mean and std of training images for later normalization
 sum_mean = [0.0 for i in range(training["n_channels"])]
 sum_std = [0.0 for j in range(training["n_channels"])]
-total = [0 for k in range(training["n_channels"])]
+total = 0
 
-with open(os.path.join(training["image_location"], "training/"),"r") as file:
+with open(os.path.join(training["image_location"], "training/training.csv"),"r") as file:
     file.readline()
     for line in file.readlines():
-        _,_,_,_,_,image_mean,image_std,_ = line.rstrip().split(",")
+        _,_,_,_,image_mean,image_std,_,_ = line.rstrip().split(",")
         for n, channel_mean in enumerate(image_mean.split(" ")):
             sum_mean[n] += float(channel_mean)
 
@@ -73,22 +70,19 @@ print("Running on device:",device)
 
 
 # Define image transformations
-
-training["transform_norm"] = Compose([CenterCrop((224,224)), Normalize(training_mean,training_std)])
+training["transformations"] = [CenterCrop((224,224)), Normalize(training_mean,training_std)]
+print(str(training["transformations"]),type(training["transformations"]),type(training["transformations"][0]))
 
 # Load training and testing datasets
 training_images = classification_class.ImagesDataset(annotations_file='training.csv',
                                                   img_dir = os.path.join(training["image_location"], "training/"),
-                                                  transform = training["transform_norm"])
-for image in training_images:
-    print(image['image'].max())
+                                                  transform = Compose(training["transformations"]))
 
 validation_images = classification_class.ImagesDataset(annotations_file='validation.csv',
                                                  img_dir= os.path.join(training["image_location"], "validation/"),
-                                                 transform = training["transform_norm"])
+                                                 transform = Compose(training["transformations"]))
 
-#TODO update back to training_images
-train_loader = DataLoader(dataset = validation_images,
+train_loader = DataLoader(dataset = training_images,
                           batch_size = training["training_batch_size"],
                           shuffle = True,
                           num_workers = 0)
@@ -97,9 +91,6 @@ validation_loader = DataLoader(dataset = validation_images,
                                batch_size = training["validation_batch_size"],
                                shuffle = True,
                                num_workers = 0)
-
-
-
 
 # Set up model
 model = classification_class.ResNet50(num_classes = 2, channels = training["n_channels"])

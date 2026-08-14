@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 import torch
-from torchvision.transforms import Compose, RandomRotation, Resize
+from torchvision.transforms import Compose, CenterCrop, Normalize
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
@@ -94,14 +94,18 @@ def test_item(model,device,image):
 test_batch_size = 5
 
 # model definitions
-model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T090729"
+model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T135028"
 
 # get settings used to train model from saved model
 settings = dict()
 with open(os.path.join(model_location, "settings.txt"), "r") as file:
+
     for line in file.readlines():
         key, value = line.rstrip().split("\t")
-        settings[key] = ast.literal_eval(value)
+        print(key, value)
+        #TODO: look into replacing eval with JSON https://docs.python.org/2/library/json.html
+        settings[key] = eval(value)
+
 
 # setup device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -119,7 +123,7 @@ print('Loaded model')
 
 testing_images = classification_class.ImagesDataset(annotations_file = 'testing.csv',
                                                  img_dir = os.path.join(settings['image_location'], "testing/"),
-                                                 transform = settings["transform_norm"])
+                                                 transform = Compose(settings["transformations"]))
 
 test_loader = DataLoader(dataset = testing_images,
                          batch_size = test_batch_size,
