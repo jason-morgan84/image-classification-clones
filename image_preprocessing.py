@@ -122,8 +122,8 @@ def resize (image, size, channels):
 
 # file location variables
 path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list.csv"
-path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260805"
-path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260805"
+path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260814"
+path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260814"
 
 # output options
 channels = (1, 3)
@@ -198,8 +198,16 @@ for file_number, file in enumerate(input_file_list):
     # resizes image to desired dimensions
     output_image = resize(padded_segments, output_size, n_channels) 
 
-    image_mean = [np.mean(output_image[channel] for channel in output_image)]
-    image_std = [np.std(output_image[channel]) for channel in output_image]
+    mean = []
+    std = []
+    for image in output_image:
+        image_mean = []
+        image_std = []
+        for channel in image:
+            image_mean.append(np.mean(channel))
+            image_std.append(np.std(channel))
+        mean.append(image_mean)
+        std.append(image_std) 
 
     #output images as multi dimensional tifs
     with open(os.path.join(path_output_csv,"output.csv"), "a") as output_file:
@@ -212,8 +220,8 @@ for file_number, file in enumerate(input_file_list):
                                              file.name,
                                              file.location,
                                              str(n),
-                                             " ".join([str(i) for i in image_mean]),
-                                             " ".join([str(i) for i in image_std]),
+                                             " ".join([str(i) for i in mean[n]]),
+                                             " ".join([str(i) for i in std[n]]),
                                              os.path.abspath(os.path.join(path_output_images,output_file_name)) + "\n"]))
     
 #genotype, date, name, input_location, clone, output_location

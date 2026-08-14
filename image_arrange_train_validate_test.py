@@ -41,9 +41,13 @@ def randomise_files(file_list, start_proportion, end_proportion):
     return output_list
 
 input_file = "output.csv"
-input_path = "D:\\Lab\\Classification\\All images\\Processed 260805\\"
-output_path = "D:\\Lab\\Classification\\All images\\Processed 260805\\"
+input_path = "D:\\Lab\\Classification\\All images\\Processed 260814\\"
+output_path = "D:\\Lab\\Classification\\All images\\Processed 260814\\"
 image_files = []
+
+if not os.path.exists(os.path.join(output_path,"training")): os.makedirs(os.path.join(output_path,"training"))
+if not os.path.exists(os.path.join(output_path,"validation")): os.makedirs(os.path.join(output_path,"validation"))
+if not os.path.exists(os.path.join(output_path,"testing")): os.makedirs(os.path.join(output_path,"testing"))
 
 with open(os.path.join(input_path,input_file)) as input_file:
     _ = input_file.readline()
