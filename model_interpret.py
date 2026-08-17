@@ -1,11 +1,9 @@
-import ast
-
 from captum.attr import Occlusion
 import numpy as np
 import os
 
 import torch
-from torchvision.transforms import Compose, CenterCrop, Normalize
+from torchvision.transforms import *
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
@@ -51,37 +49,50 @@ def model_occlusion(model,test_image,label, n_channels):
                                       signs=["all", "positive", "negative"],
                                       methods=["original_image", "blended_heat_map", "blended_heat_map"])
 
-def test_class_accuracy(model, device, loader, groups):
+def get_image_predictions(model, device, loader, groups):
 
     model.to(device)
     model.eval()
-    n_groups = len(groups)
-    group_total = [0] * n_groups
-    group_accuracy = []
-    total = [0] * n_groups
+
+    image_predictions=[]
 
     with torch.no_grad():
         for data in loader:
             images = Variable(data['image'].to(device))
             labels = Variable(data['image_class'].to(device))
+            names = data['file_name']
 
             # run the model on the test set to predict labels
             outputs = model(images.to(device))
 
             # the label with the highest energy will be our prediction
             _, predicted = torch.max(outputs.data, 1)
-            test = (predicted == labels.squeeze())
-            for n, item in enumerate(labels):
-                item_group = item.item()
-                total[item_group] += 1
-                if test[n].item():
-                    group_total[item_group] += 1
+            for n, prediction in enumerate(predicted):
+                image_predictions.append([names[n],prediction.item(),labels[n].item()])
 
-        for n,group in enumerate(groups):
-            group_accuracy.append((group_total[n]/total[n])*100)
-            print(group+" ("+str(n)+") accuracy: "+str(round(group_accuracy[n],2))+"%")
+    return image_predictions
 
-    return group_accuracy
+def calculate_class_accuracy(predictions, groups):
+    two_way_table = np.zeros((len(groups), len(groups)))
+    group_accuracy = np.zeros(len(groups))
+    correct = 0
+
+    for item in predictions:
+        genotype = item[2]
+        predicted = item[1]
+        two_way_table[genotype][predicted] += 1
+        if predicted == genotype:
+            correct += 1
+
+    overall_accuracy = float(round(correct / two_way_table.sum() * 100, 2))
+    print("Overall accuracy:", str(overall_accuracy) + "%")
+
+    for n, genotype in enumerate(two_way_table):
+        group_accuracy[n] = genotype[n] / sum(genotype)
+        print(groups[n] + ": " + str(round(group_accuracy[n] * 100,2)) + "%")
+
+
+    return two_way_table, overall_accuracy, group_accuracy
 
 def test_item(model,device,image):
     model.eval()
@@ -94,7 +105,7 @@ def test_item(model,device,image):
 test_batch_size = 5
 
 # model definitions
-model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T150150"
+model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260817T140253"
 
 # get settings used to train model from saved model
 settings = dict()
@@ -118,8 +129,6 @@ model.to(device)
 print('Loaded model')
 
 # set up testing images and dataloader
-#transform_norm = Compose([RandomRotation(180),Resize((224,224))])
-
 testing_images = classification_class.ImagesDataset(annotations_file = 'testing.csv',
                                                  img_dir = os.path.join(settings['image_location'], "testing/"),
                                                  transform = Compose(settings["transformations"]))
@@ -129,8 +138,28 @@ test_loader = DataLoader(dataset = testing_images,
                          shuffle = True,
                          num_workers = 0)
 
-# Get accuracy of classes:
-test_class_accuracy(model, device, test_loader, settings['classes'])
+# Get predictions for each image in test dataset, then calculate 2 way table, overall accuracy and class accuracy
+
+predictions = get_image_predictions(model, device, test_loader, settings['classes'])
+two_way_table, accuracy, group_accuracy = calculate_class_accuracy(predictions, settings['classes'])
+
+# output accuracys and predictions
+with open(os.path.join(model_location, "test_results.txt"), "w") as file:
+    write_line = '\t' + "\t".join(group for group in settings['classes']) +'\n'
+    file.write(write_line)
+    for n, genotype in enumerate(two_way_table):
+        write_line = settings['classes'][n] + "\t"+"\t".join(str(item) for item in genotype) +'\n'
+        file.write(write_line)
+    file.write("\t".join(["overall_accuracy",str(accuracy)])+'\n')
+    for n, genotype in enumerate(group_accuracy):
+        write_line = settings['classes'][n] + "\t" + str(round(genotype*100,2)) +"\n"
+        file.write(write_line)
+
+with open(os.path.join(model_location, "predictions.csv"), "w") as file:
+    file.write("\t".join(("name","prediction","genotype"))+'\n')
+    for line in predictions:
+        file.write(line[0] + "\t" + str(settings['classes'][line[1]]) + "\t" + str(settings['classes'][line[1]]) + '\n')
+
 
 # Test batch of images
 batch = next(iter(test_loader))
