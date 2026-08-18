@@ -105,7 +105,7 @@ def test_item(model,device,image):
 test_batch_size = 5
 
 # model definitions
-model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260817T140253"
+model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T150150"
 
 # get settings used to train model from saved model
 settings = dict()
@@ -158,7 +158,7 @@ with open(os.path.join(model_location, "test_results.txt"), "w") as file:
 with open(os.path.join(model_location, "predictions.csv"), "w") as file:
     file.write("\t".join(("name","prediction","genotype"))+'\n')
     for line in predictions:
-        file.write(line[0] + "\t" + str(settings['classes'][line[1]]) + "\t" + str(settings['classes'][line[1]]) + '\n')
+        file.write(line[0] + "\t" + str(settings['classes'][line[1]]) + "\t" + str(settings['classes'][line[2]]) + '\n')
 
 
 # Test batch of images
