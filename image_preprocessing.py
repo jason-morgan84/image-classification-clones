@@ -120,10 +120,29 @@ def resize (image, size, channels):
         output_images.append(ski.transform.resize(item.transpose(2, 0, 1), (channels,) + size))
     return output_images
 
+def calculate_properties(input_image, segments):
+    #works out label_properties using GFP channel and segmented image
+    label_properties = ski.measure.regionprops(segments, input_image[0])
+
+    calculated_properties_labels = ["area", "GFP_intensity", "thresholded_nuclear_intensity"]
+    calculated_properties = []
+
+    for label in label_properties:
+        calculated_properties.append([float(label.area),float(label.intensity_mean)])
+
+    label_properties = ski.measure.regionprops(segments, input_image[1])
+    for n, label in enumerate(label_properties):
+        calculated_properties[n].append(float(label.intensity_mean))
+
+    
+
+   
+    return label_properties, calculated_properties, calculated_properties_labels
+
 # file location variables
-path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list_test.csv"
-path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260814 no pad"
-path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260814 no pad"
+path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list.csv"
+path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260818 no pad with properties"
+path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260818 no pad with properties"
 
 # output options
 channels = (1, 3)
@@ -180,7 +199,8 @@ for file_number, file in enumerate(input_file_list):
  
     # label max projected image {yx} and get properties of labels
     labelled_image = segment(maxproject_sliced, GFP_channel, sigma, dilation_radius, min_area) 
-    label_properties = ski.measure.regionprops(labelled_image)
+    label_properties, calculated_properties, calulated_property_labels = calculate_properties(maxproject_sliced, labelled_image)
+
 
     # for each segment, returns image with only content in the the region corresponding to that segment
     # returns a list of regions. each region is a numpy array in the format {yxc}
@@ -210,8 +230,10 @@ for file_number, file in enumerate(input_file_list):
         std.append(image_std) 
 
     #output images as multi dimensional tifs
+
     with open(os.path.join(path_output_csv,"output.csv"), "a") as output_file:
         for n, image in enumerate(output_image):
+            properties = ",".join([str(item) for item in calculated_properties[n]])
             output_file_name = str(file_number) + "c" + str(n) + ".tif"
             print(output_file_name)
             ti.imwrite(os.path.join(path_output_images, output_file_name), image, photometric='minisblack', metadata={"axes": "CYX"})
@@ -222,7 +244,8 @@ for file_number, file in enumerate(input_file_list):
                                              str(n),
                                              " ".join([str(i) for i in mean[n]]),
                                              " ".join([str(i) for i in std[n]]),
-                                             os.path.abspath(os.path.join(path_output_images,output_file_name)) + "\n"]))
+                                             os.path.abspath(os.path.join(path_output_images,output_file_name)),
+                                             properties+"\n"]))
     
 #genotype, date, name, input_location, clone, output_location
 
