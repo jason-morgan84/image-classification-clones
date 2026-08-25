@@ -24,7 +24,7 @@ import model_train
 # training settings
 
 training = {
-    "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260814/",
+    "image_location": "/mnt/74C88A6CC88A2D04/Lab/Classification/All images/Processed 260825 no padding square crop/",
     "classes": ("AR", "ARS"),
     "n_channels": 2,
     "training_batch_size": 15,

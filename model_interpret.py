@@ -11,7 +11,7 @@ from captum.attr import visualization as viz
 import classification_class
 
 
-def model_occlusion(model,test_image,label, n_channels):
+def model_occlusion(model,test_image,label, n_channels,means,std):
     model.eval()
     occlusion = Occlusion(model)
     strides = (n_channels, 9, 9)  # smaller = more fine-grained attribution but slower
@@ -22,7 +22,15 @@ def model_occlusion(model,test_image,label, n_channels):
     image_output = test_image.squeeze().cpu().detach().numpy()
     _, height, width = image_output.shape
     #image_output = image_output * 0.05 + 0.04
+    unnormalised=[]
+    for n, channel in enumerate(image_output):
+        unnormalised.append((channel*std[n]+means[n])*255)
+
+    unnormalised = np.array(unnormalised)
+    print(unnormalised.max())
+
     image_output = np.transpose(np.append(image_output, np.zeros((1,height,width)), axis=0),(1,2,0)).astype(np.uint8)
+    unnormalised = np.transpose(np.append(unnormalised, np.zeros((1,height,width)), axis=0),(1,2,0)).astype(np.uint8)
     #image_output = np.transpose(image_output,2,0,1)
 
 
@@ -45,7 +53,7 @@ def model_occlusion(model,test_image,label, n_channels):
     # negative attribution indicates distractor areas whose absence increases the score
 
     viz.visualize_image_attr_multiple(attribution_output,
-                                      original_image = image_output,
+                                      original_image = unnormalised,
                                       signs=["all", "positive", "negative"],
                                       methods=["original_image", "blended_heat_map", "blended_heat_map"])
 
@@ -105,7 +113,7 @@ def test_item(model,device,image):
 test_batch_size = 5
 
 # model definitions
-model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260814T150150"
+model_location = "/mnt/74C88A6CC88A2D04/Lab/Classification/models/modelD20260825T151809"
 
 # get settings used to train model from saved model
 settings = dict()
@@ -116,7 +124,11 @@ with open(os.path.join(model_location, "settings.txt"), "r") as file:
         #TODO: look into replacing eval with JSON https://docs.python.org/2/library/json.html
         settings[key] = eval(value)
 
+normalisation = str(str(settings["transformations"][1]))
+means = eval(normalisation[normalisation.find("mean")+5:normalisation.find("]")+1])
+std = eval(normalisation[normalisation.find("std")+4:-1])
 
+print(means)
 # setup device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Running on device:", device)
@@ -179,4 +191,4 @@ batch = next(iter(test_loader))
 prediction = test_item(model, device, batch["image"])
 print('File: {}, Real Label: {}, Predicted Label: {}'.format(batch["file_name"][0],batch["genotype"][0],settings['classes'][prediction.item()]))
 
-model_occlusion(model, batch["image"].to(device), batch["image_class"].to(device).item(), settings['n_channels'])
+model_occlusion(model, batch["image"].to(device), batch["image_class"].to(device).item(), settings['n_channels'],means,std)

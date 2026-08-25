@@ -34,7 +34,7 @@ class ImagesDataset(Dataset):
 
         img_path = os.path.join(self.img_dir, file_name + ".tif")
         #reads image and converts to 0-1 float type
-        image = torch.from_numpy(tiff.imread(img_path)/255).float()
+        image = torch.from_numpy(tiff.imread(img_path)).float()
 
         if self.transform:
             image = self.transform(image)
