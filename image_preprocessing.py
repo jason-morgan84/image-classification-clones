@@ -78,16 +78,26 @@ def isolate_segments (image, image_labelled, height, width, n_channels): # outpu
     return isolated_segments
 
 def crop_segments (image_segments, # 4D np array of original image divided into segmented regions in the format syxc
-                   label_properties): # properties of segmented regions
+                   label_properties,
+                   isolated): # properties of segmented regions
 
+    # crops segments down. if isolated == true, assumes input in the format {n,y,x,c} where n is a segment, and the non-segment regions of each
+    # image has already been cleared.
+    # if isolated == false, assumes input is maxprojected image in the format {c,y,x}
+    
     output_images=[]
 
     #gets properties of all labels
     
     for n, label in enumerate(label_properties):
+        if isolated == True:
+            image_to_crop = image_segments[n]
+        else:
+            image_to_crop = image_segments.transpose(1,2,0)
+
         # for each label, gets bounding box and crops image to that region
         min_row, min_col, max_row, max_col = label.bbox
-        new_image = np.array(image_segments[n][min_row:max_row, min_col:max_col])
+        new_image = np.array(image_to_crop[min_row:max_row, min_col:max_col])
         output_images.append(np.array(new_image))
 
     return output_images
@@ -141,8 +151,8 @@ def calculate_properties(input_image, segments):
 
 # file location variables
 path_input = "D:\\Lab\\Classification\\All Images\\Input File Lists\\ar_ars_file_list.csv"
-path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260818 no pad with properties"
-path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260818 no pad with properties"
+path_output_csv = "D:\\Lab\\Classification\\All Images\\Processed 260825 no padding square crop"
+path_output_images = "D:\\Lab\\Classification\\All Images\\Processed 260825 no padding square crop"
 
 # output options
 channels = (1, 3)
@@ -204,13 +214,13 @@ for file_number, file in enumerate(input_file_list):
 
     # for each segment, returns image with only content in the the region corresponding to that segment
     # returns a list of regions. each region is a numpy array in the format {yxc}
-    isolated_segments = isolate_segments(maxproject_sliced, labelled_image, height, width, n_channels)
+    """isolated_segments = isolate_segments(maxproject_sliced, labelled_image, height, width, n_channels)
     if len(isolated_segments) == 0:
         print("No clones found")
-        continue
+        continue"""
 
     # for each isolated segment, crops down to the bounding box of that segment
-    cropped_segments = crop_segments(isolated_segments, label_properties)
+    cropped_segments = crop_segments(maxproject_sliced, label_properties, False)
 
     # pads cropped segments so isolated region is central
     #padded_segments = pad_cropped_segments(cropped_segments, height, width, label_properties)

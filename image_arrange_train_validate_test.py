@@ -22,7 +22,7 @@ def separate(file_list, list_name, output_path):
     
     for n, file in enumerate(file_list):
         print(n,"/",len(file_list),end='\r')
-        genotype, date, name, input_location, clone, image_mean, image_std, full_path = tuple(file.rstrip().split(","))
+        genotype, date, name, input_location, clone, image_mean, image_std, full_path ,_,_,_= tuple(file.rstrip().split(","))
         file_location, file_name = os.path.split(full_path)
         image_id, _ = os.path.splitext(file_name)
         shutil.copyfile(full_path, os.path.join(file_location, list_name, file_name))
@@ -41,8 +41,8 @@ def randomise_files(file_list, start_proportion, end_proportion):
     return output_list
 
 input_file = "output.csv"
-input_path = "D:\\Lab\\Classification\\All images\\Processed 260814\\"
-output_path = "D:\\Lab\\Classification\\All images\\Processed 260814\\"
+input_path = "D:\\Lab\\Classification\\All images\\Processed 260825 no padding square crop\\"
+output_path = "D:\\Lab\\Classification\\All images\\Processed 260825 no padding square crop\\"
 image_files = []
 
 if not os.path.exists(os.path.join(output_path,"training")): os.makedirs(os.path.join(output_path,"training"))
